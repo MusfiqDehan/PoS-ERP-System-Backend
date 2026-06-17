@@ -11,6 +11,7 @@
 __pycache__
 db.sqlite3
 media
+staticfiles/
 
 # Backup files # 
 *.bak 
@@ -119,6 +120,9 @@ venv.bak/
 
 # mypy 
 .mypy_cache/ 
+
+# Graphify output is at the monorepo root (../graphify-out/), not in this subfolder
+graphify-out/
 
 # Sublime Text # 
 *.tmlanguage.cache 

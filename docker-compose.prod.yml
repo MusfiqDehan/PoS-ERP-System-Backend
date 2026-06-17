@@ -1,0 +1,279 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortorium-backend
+    image: sortorium-backend:latest
+    env_file: .env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - SKIP_DB_BOOTSTRAP=1
+      - USE_PGBOUNCER=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CACHE_URL=redis://redis:6379/2
+      - ASGI_WORKERS=2
+    expose:
+      - "8002"
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend_static:/app/staticfiles
+      - backend_media:/app/media
+    networks:
+      - app_network
+      - traefik_proxy
+    mem_limit: 1536m
+    logging: *default-logging
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS -H \"Host: $${PUBLIC_DOMAIN:-sortorium.com}\" -H \"X-Forwarded-Proto: https\" http://127.0.0.1:8002/api/v1/health/ready/ > /dev/null",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+
+      # ── HTTPS API (rate limited) — platform hosts
+      - "traefik.http.routers.backend-api.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-api.entrypoints=websecure"
+      - "traefik.http.routers.backend-api.tls=true"
+      - "traefik.http.routers.backend-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-api.tls.domains[0].main=sortorium.com"
+      - "traefik.http.routers.backend-api.tls.domains[0].sans=*.sortorium.com"
+      - "traefik.http.routers.backend-api.priority=100"
+      - "traefik.http.routers.backend-api.middlewares=security-headers@file,compress@file,api-ratelimit@file"
+      - "traefik.http.routers.backend-api.service=backend"
+
+      # ── HTTPS WebSocket — platform hosts
+      - "traefik.http.routers.backend-ws.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.backend-ws.entrypoints=websecure"
+      - "traefik.http.routers.backend-ws.tls=true"
+      - "traefik.http.routers.backend-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-ws.tls.domains[0].main=sortorium.com"
+      - "traefik.http.routers.backend-ws.tls.domains[0].sans=*.sortorium.com"
+      - "traefik.http.routers.backend-ws.priority=100"
+      - "traefik.http.routers.backend-ws.middlewares=security-headers@file,ws-headers@file"
+      - "traefik.http.routers.backend-ws.service=backend"
+
+      # ── HTTP-only ADMS devices — platform hosts (port 80, no TLS)
+      - "traefik.http.routers.backend-adms.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/iclock`) || PathPrefix(`/cdata`) || PathPrefix(`/getrequest`) || PathPrefix(`/devicecmd`))"
+      - "traefik.http.routers.backend-adms.entrypoints=web"
+      - "traefik.http.routers.backend-adms.priority=100"
+      - "traefik.http.routers.backend-adms.middlewares=adms-http-headers@file"
+      - "traefik.http.routers.backend-adms.service=backend"
+
+      # ── HTTPS API — tenant custom domains
+      - "traefik.http.routers.backend-custom-api.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-custom-api.entrypoints=websecure"
+      - "traefik.http.routers.backend-custom-api.tls=true"
+      - "traefik.http.routers.backend-custom-api.tls.certresolver=customdomains"
+      - "traefik.http.routers.backend-custom-api.priority=100"
+      - "traefik.http.routers.backend-custom-api.middlewares=security-headers@file,compress@file,api-ratelimit@file"
+      - "traefik.http.routers.backend-custom-api.service=backend"
+
+      # ── HTTPS WebSocket — tenant custom domains
+      - "traefik.http.routers.backend-custom-ws.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.backend-custom-ws.entrypoints=websecure"
+      - "traefik.http.routers.backend-custom-ws.tls=true"
+      - "traefik.http.routers.backend-custom-ws.tls.certresolver=customdomains"
+      - "traefik.http.routers.backend-custom-ws.priority=100"
+      - "traefik.http.routers.backend-custom-ws.middlewares=security-headers@file,ws-headers@file"
+      - "traefik.http.routers.backend-custom-ws.service=backend"
+
+      # ── HTTP-only ADMS — tenant custom domains
+      - "traefik.http.routers.backend-custom-adms.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/iclock`) || PathPrefix(`/cdata`) || PathPrefix(`/getrequest`) || PathPrefix(`/devicecmd`))"
+      - "traefik.http.routers.backend-custom-adms.entrypoints=web"
+      - "traefik.http.routers.backend-custom-adms.priority=100"
+      - "traefik.http.routers.backend-custom-adms.middlewares=adms-http-headers@file"
+      - "traefik.http.routers.backend-custom-adms.service=backend"
+
+      - "traefik.http.services.backend.loadbalancer.server.port=8002"
+    command: ["/bin/sh", "/app/scripts/run-asgi-prod.sh"]
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortorium-celery-worker
+    image: sortorium-backend:latest
+    env_file: .env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - SKIP_DB_BOOTSTRAP=1
+      - USE_PGBOUNCER=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CACHE_URL=redis://redis:6379/2
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command:
+      [
+        "celery",
+        "-A",
+        "config.celery:app",
+        "worker",
+        "--loglevel=INFO",
+        "--concurrency=2",
+        "--prefetch-multiplier=1",
+        "--max-tasks-per-child=500",
+        "--soft-time-limit=240",
+        "--time-limit=300",
+      ]
+    volumes:
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
+    networks:
+      - app_network
+    mem_limit: 1024m
+    logging: *default-logging
+    restart: unless-stopped
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortorium-celery-beat
+    image: sortorium-backend:latest
+    env_file: .env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - USE_PGBOUNCER=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CACHE_URL=redis://redis:6379/2
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: ["celery", "-A", "config.celery:app", "beat", "--loglevel=INFO", "--pidfile=/tmp/celerybeat.pid"]
+    volumes:
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
+    networks:
+      - app_network
+    mem_limit: 256m
+    logging: *default-logging
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.25.2-p0
+    container_name: sortorium-pgbouncer
+    env_file: .env.prod
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      POOL_MODE: session
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+    mem_limit: 128m
+    logging: *default-logging
+    restart: unless-stopped
+
+  db:
+    image: postgres:18.4-alpine
+    container_name: sortorium-db
+    env_file: .env.prod
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    ports:
+      - "5452:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./deploy/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+    mem_limit: 2560m
+    logging: *default-logging
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.8-alpine
+    container_name: sortorium-redis
+    ports:
+      - "6380:6379"
+    command:
+      [
+        "redis-server",
+        "--save",
+        "300",
+        "1000",
+        "--appendonly",
+        "yes",
+        "--maxmemory",
+        "384mb",
+        "--maxmemory-policy",
+        "allkeys-lru",
+      ]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+    mem_limit: 512m
+    logging: *default-logging
+    restart: unless-stopped
+
+  # Optional: run backups on the host cron instead of a sidecar.
+  # Example (host crontab, daily 02:30 UTC):
+  #   30 2 * * * cd /path/to/sortorium_app_new_backend && POSTGRES_USER=... POSTGRES_DB=... ./scripts/backup-postgres.sh
+
+volumes:
+  postgres_data:
+  backend_static:
+  backend_media:
+
+networks:
+  app_network:
+    name: sortorium_app_network
+    driver: bridge
+  traefik_proxy:
+    external: true
+    name: traefik_proxy
