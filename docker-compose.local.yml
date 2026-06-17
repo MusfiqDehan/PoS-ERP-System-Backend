@@ -1,0 +1,120 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortorium-backend-local
+    image: sortorium-backend-local:latest
+    env_file: .env.local
+    environment:
+      - DEBUG=true
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CACHE_URL=redis://redis:6379/2
+    ports:
+      - "8002:8002"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - backend_media_local:/app/media
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8002", "config.asgi:application"]
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortorium-celery-worker-local
+    image: sortorium-backend-local:latest
+    user: "app"
+    env_file: .env.local
+    environment:
+      - DEBUG=true
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - SKIP_DB_BOOTSTRAP=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CACHE_URL=redis://redis:6379/2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    command: ["celery", "-A", "config.celery:app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    volumes:
+      - .:/app
+      - backend_media_local:/app/media
+    restart: unless-stopped
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortorium-celery-beat-local
+    image: sortorium-backend-local:latest
+    user: "app"
+    env_file: .env.local
+    environment:
+      - DEBUG=true
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - SKIP_DB_BOOTSTRAP=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CACHE_URL=redis://redis:6379/2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    command: ["celery", "-A", "config.celery:app", "beat", "--loglevel=INFO", "--pidfile=/tmp/celerybeat.pid", "--schedule=/tmp/celerybeat-schedule"]
+    volumes:
+      - .:/app
+      - backend_media_local:/app/media
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.8-alpine
+    container_name: sortorium-redis-local
+    command: ["redis-server", "--save", "60", "1000", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  db:
+    image: postgres:18.4-alpine
+    container_name: sortorium-db-local
+    env_file: .env.local
+    ports:
+      - "5452:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data_local:
+  backend_media_local:
