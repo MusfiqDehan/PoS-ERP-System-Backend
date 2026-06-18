@@ -46,13 +46,27 @@ class Tenant(UUIDPrimaryKeyMixin, TenantMixin):
         default=False,
         help_text="When True, this tenant may connect a custom domain from Settings.",
     )
-
+    landing_page_enabled = models.BooleanField(default=False)
     features = models.JSONField(default=dict, blank=True)
     owner_email = models.EmailField(null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        "tenancy.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_tenants",
+    )
+    updated_by = models.ForeignKey(
+        "tenancy.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_tenants",
+    )
 
     auto_create_schema = True
 

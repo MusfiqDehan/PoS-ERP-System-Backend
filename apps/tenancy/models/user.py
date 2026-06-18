@@ -1,15 +1,15 @@
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    BaseUserManager,
-    PermissionsMixin,
-)
+from django.contrib.auth.hashers import check_password as auth_check_password
+from django.contrib.auth.hashers import make_password
 from django.db import models
 from django.utils import timezone
 
-from shared.models import UUIDPrimaryKeyMixin
+from shared.models import BaseModel, SoftDeleteManager
 
 
-class UserManager(BaseUserManager):
+class UserManager(SoftDeleteManager):
+    def get_by_natural_key(self, username):
+        return self.get(email__iexact=username)
+
     def create_user(self, email=None, phone=None, password=None, **extra_fields):
         if not email and not phone:
             raise ValueError("User must have either email or phone")
@@ -26,20 +26,30 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
+    def create_superadmin(self, email, password=None, **extra_fields):
         extra_fields.setdefault("email_verified", True)
+        user = self.create_user(email=email, password=password, **extra_fields)
+        from apps.tenancy.models.platform_rbac import PlatformRole, PlatformUserRole
 
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser must have is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser must have is_superuser=True.")
+        role, _ = PlatformRole.objects.get_or_create(
+            slug="superadmin",
+            defaults={
+                "name": "Superadmin",
+                "description": "Full platform-wide access.",
+                "is_system": True,
+            },
+        )
+        PlatformUserRole.objects.get_or_create(user=user, role=role)
+        return user
 
-        return self.create_user(email=email, password=password, **extra_fields)
+    @classmethod
+    def normalize_email(cls, email):
+        if not email:
+            return email
+        return email.strip().lower()
 
 
-class User(UUIDPrimaryKeyMixin, AbstractBaseUser, PermissionsMixin):
+class User(BaseModel):
     email = models.EmailField(unique=True, null=True, blank=True)
     phone = models.CharField(max_length=15, unique=True, null=True, blank=True)
     full_name = models.CharField(max_length=100, blank=True, default="")
@@ -52,11 +62,10 @@ class User(UUIDPrimaryKeyMixin, AbstractBaseUser, PermissionsMixin):
         help_text="Tenant this user belongs to. Platform users leave this empty.",
     )
 
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
     password_set_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    password = models.CharField(max_length=128)
+    last_login = models.DateTimeField(null=True, blank=True)
 
     objects = UserManager()
 
@@ -70,3 +79,29 @@ class User(UUIDPrimaryKeyMixin, AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return f"{self.email or self.phone}"
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        return auth_check_password(raw_password, self.password)
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
+    def is_staff(self) -> bool:
+        from apps.tenancy.services.platform_permissions import PlatformPermissionService
+
+        return PlatformPermissionService.is_superadmin(self)
+
+    def has_perm(self, perm, obj=None):
+        return self.is_staff
+
+    def has_module_perms(self, app_label):
+        return self.is_staff
