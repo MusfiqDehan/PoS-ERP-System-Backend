@@ -6,14 +6,6 @@ services:
     container_name: sortorium-backend-local
     image: sortorium-backend-local:latest
     env_file: .env.local
-    environment:
-      - DEBUG=true
-      - DJANGO_SETTINGS_MODULE=config.settings.local
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
     ports:
       - "8002:8002"
     depends_on:
@@ -34,16 +26,9 @@ services:
     container_name: sortorium-celery-worker-local
     image: sortorium-backend-local:latest
     user: "app"
-    env_file: .env.local
-    environment:
-      - DEBUG=true
-      - DJANGO_SETTINGS_MODULE=config.settings.local
-      - SKIP_DB_BOOTSTRAP=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
+    env_file:
+      - .env.local
+      - .env.local.celery
     depends_on:
       db:
         condition: service_healthy
@@ -64,16 +49,9 @@ services:
     container_name: sortorium-celery-beat-local
     image: sortorium-backend-local:latest
     user: "app"
-    env_file: .env.local
-    environment:
-      - DEBUG=true
-      - DJANGO_SETTINGS_MODULE=config.settings.local
-      - SKIP_DB_BOOTSTRAP=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
+    env_file:
+      - .env.local
+      - .env.local.celery
     depends_on:
       db:
         condition: service_healthy
