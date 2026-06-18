@@ -154,19 +154,17 @@ class Migration(migrations.Migration):
                         serialize=False,
                     ),
                 ),
-                ("password", models.CharField(max_length=128, verbose_name="password")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("is_active", models.BooleanField(default=True, help_text="Whether this item is active and usable")),
+                ("is_published", models.BooleanField(default=False, help_text="Whether this item is published/visible")),
+                ("is_deleted", models.BooleanField(default=False)),
+                ("deleted_at", models.DateTimeField(blank=True, null=True)),
+                ("password", models.CharField(max_length=128)),
                 (
                     "last_login",
                     models.DateTimeField(
                         blank=True, null=True, verbose_name="last login"
-                    ),
-                ),
-                (
-                    "is_superuser",
-                    models.BooleanField(
-                        default=False,
-                        help_text="Designates that this user has all permissions without explicitly assigning them.",
-                        verbose_name="superuser status",
                     ),
                 ),
                 (
@@ -180,31 +178,36 @@ class Migration(migrations.Migration):
                     models.CharField(blank=True, max_length=15, null=True, unique=True),
                 ),
                 ("full_name", models.CharField(blank=True, default="", max_length=100)),
-                ("is_active", models.BooleanField(default=True)),
-                ("is_staff", models.BooleanField(default=False)),
                 ("email_verified", models.BooleanField(default=False)),
                 ("password_set_at", models.DateTimeField(blank=True, null=True)),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
-                    "groups",
-                    models.ManyToManyField(
+                    "created_by",
+                    models.ForeignKey(
                         blank=True,
-                        help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups.",
-                        related_name="user_set",
-                        related_query_name="user",
-                        to="auth.group",
-                        verbose_name="groups",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_created_records",
+                        to=settings.AUTH_USER_MODEL,
                     ),
                 ),
                 (
-                    "user_permissions",
-                    models.ManyToManyField(
+                    "updated_by",
+                    models.ForeignKey(
                         blank=True,
-                        help_text="Specific permissions for this user.",
-                        related_name="user_set",
-                        related_query_name="user",
-                        to="auth.permission",
-                        verbose_name="user permissions",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_updated_records",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "deleted_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_deleted_records",
+                        to=settings.AUTH_USER_MODEL,
                     ),
                 ),
                 (
