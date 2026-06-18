@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AbstractBaseUser
+from apps.tenancy.models import User as TenancyUser
 from django.core.cache import cache
 from django.utils import timezone
 from django_tenants.utils import schema_context
@@ -22,7 +22,7 @@ class AuthTokens:
     refresh: str
     tenant: Tenant
     domain: str
-    user: AbstractBaseUser
+    user: TenancyUser
 
 
 class AuthService:
@@ -70,7 +70,7 @@ class AuthService:
                     cache_key, failed_attempts + 1, timeout=AuthService.LOCKOUT_SECONDS
                 )
                 raise ValueError("Invalid credentials.")
-            if not user.is_active:
+            if not user.is_active or user.is_deleted:
                 raise PermissionError("User account is inactive.")
 
             user.last_login = timezone.now()
@@ -104,14 +104,20 @@ class AuthService:
         return {"access": str(access), "refresh": str(refresh)}
 
     @staticmethod
-    def serialize_user(user: AbstractBaseUser) -> dict[str, Any]:
+    def serialize_user(user: TenancyUser) -> dict[str, Any]:
+        from apps.tenancy.models import PlatformUserRole
+
+        platform_roles = list(
+            PlatformUserRole.objects.filter(user=user).values_list(
+                "role__slug", flat=True
+            )
+        )
         return {
             "id": str(user.id),
             "email": user.email,
             "phone": user.phone,
             "full_name": user.full_name,
-            "is_staff": user.is_staff,
-            "is_superuser": user.is_superuser,
+            "platform_roles": platform_roles,
             "email_verified": user.email_verified,
             "tenant_id": str(user.tenant_id) if user.tenant_id else None,
         }
