@@ -26,6 +26,10 @@ from shared.cache.helpers import (
 from shared.responses import error_response, list_success_response, success_response
 from shared.responses.error_codes import ErrorCode
 from shared.tenancy.helpers import is_tenant_admin_user, scope_queryset_by_branch_access
+from shared.tenancy.limits import (
+    custom_role_capacity_exceeded,
+    role_assignment_capacity_exceeded,
+)
 from shared.views import ModelCRUDView
 
 
@@ -38,6 +42,16 @@ class RoleListCreateView(ModelCRUDView):
     serializer_class = RoleSerializer
     permission_classes = [IsRoleAdmin]
     pagination_class = None
+
+    def _create(self, request):
+        limit_error = custom_role_capacity_exceeded()
+        if limit_error is not None:
+            return error_response(
+                message=limit_error["detail"],
+                error_code=limit_error.get("code", str(ErrorCode.PERMISSION_DENIED)),
+                http_status=status.HTTP_403_FORBIDDEN,
+            )
+        return super()._create(request)
 
     def get_success_message(self, action: str) -> str:
         return {
@@ -128,6 +142,17 @@ class UserRoleListCreateView(ModelCRUDView):
     def _create(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        role = serializer.validated_data.get("role")
+        if role is not None:
+            limit_error = role_assignment_capacity_exceeded(role.slug)
+            if limit_error is not None:
+                return error_response(
+                    message=limit_error["detail"],
+                    error_code=limit_error.get(
+                        "code", str(ErrorCode.PERMISSION_DENIED)
+                    ),
+                    http_status=status.HTTP_403_FORBIDDEN,
+                )
         actor_email = getattr(request.user, "email", "") or ""
         instance = serializer.save(assigned_by_email=actor_email)
         invalidate_user_permissions(connection.schema_name, instance.user_id)
