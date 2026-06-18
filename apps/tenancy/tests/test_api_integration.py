@@ -61,7 +61,7 @@ def test_unauthenticated_me_returns_401(tenant, tenant_domain):
 def test_access_my_permissions(tenant, tenant_domain, tenant_schema, tenant_user):
     with schema_context(tenant.schema_name):
         connection.set_tenant(tenant)
-        role = Role.objects.create(name="Admin", slug="admin")
+        role = Role.objects.create(name="Permissions Manager", slug="perm_mgr")
         RolePermission.objects.create(
             role=role, feature_key="permissions", permission_level="full"
         )
@@ -107,7 +107,7 @@ def test_platform_admin_tenants_requires_auth(public_schema):
 def test_platform_admin_tenants_superuser(public_schema):
     from apps.tenancy.models import User
 
-    admin = User.objects.create_superuser(
+    admin = User.objects.create_superadmin(
         email="platform@test.com", password="TestPass1!"
     )
     client = APIClient()
