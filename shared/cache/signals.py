@@ -16,6 +16,7 @@ from shared.cache.helpers import (
     invalidate_tenant_admin_notification_counts,
     invalidate_tenant_overview,
     invalidate_timezone,
+    invalidate_platform_user_permissions,
     invalidate_user_permissions,
 )
 
@@ -120,11 +121,26 @@ def invalidate_notification_count_on_read(sender, instance, **kwargs):
         invalidate_notification_count(schema_name, instance.user_id)
 
 
-@receiver(post_save, sender="identity.User")
-def invalidate_user_permissions_on_identity_change(
+@receiver(post_save, sender="access.UserRole")
+@receiver(post_delete, sender="access.UserRole")
+def invalidate_user_permissions_on_user_role_change(sender, instance, **kwargs):
+    schema_name = connection.schema_name
+    if not schema_name or schema_name == "public":
+        return
+    invalidate_user_permissions(schema_name, instance.user_id)
+
+
+@receiver(post_save, sender="tenancy.PlatformUserRole")
+@receiver(post_delete, sender="tenancy.PlatformUserRole")
+def invalidate_platform_user_permissions_on_role_change(sender, instance, **kwargs):
+    invalidate_platform_user_permissions(instance.user_id)
+
+
+@receiver(post_save, sender="tenancy.User")
+def invalidate_user_permissions_on_user_active_change(
     sender, instance, update_fields=None, **kwargs
 ):
-    tracked = {"is_staff", "is_superuser", "role"}
+    tracked = {"is_active", "is_deleted"}
     if update_fields is not None and tracked.isdisjoint(update_fields):
         return
     schema_name = connection.schema_name
