@@ -12,16 +12,6 @@ services:
     container_name: sortorium-backend
     image: sortorium-backend:latest
     env_file: .env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
-      - SKIP_DB_BOOTSTRAP=1
-      - USE_PGBOUNCER=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
-      - ASGI_WORKERS=2
     expose:
       - "8002"
     depends_on:
@@ -118,15 +108,6 @@ services:
     container_name: sortorium-celery-worker
     image: sortorium-backend:latest
     env_file: .env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
-      - SKIP_DB_BOOTSTRAP=1
-      - USE_PGBOUNCER=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
     depends_on:
       pgbouncer:
         condition: service_started
@@ -165,14 +146,6 @@ services:
     container_name: sortorium-celery-beat
     image: sortorium-backend:latest
     env_file: .env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
-      - USE_PGBOUNCER=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
     depends_on:
       pgbouncer:
         condition: service_started
@@ -195,13 +168,7 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer:v1.25.2-p0
     container_name: sortorium-pgbouncer
-    env_file: .env.prod
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      POOL_MODE: session
-      MAX_CLIENT_CONN: 200
-      DEFAULT_POOL_SIZE: 20
-      AUTH_TYPE: scram-sha-256
+    env_file: .env.pgbouncer.prod
     depends_on:
       db:
         condition: service_healthy
