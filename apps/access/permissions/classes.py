@@ -2,9 +2,27 @@
 
 from rest_framework.permissions import BasePermission
 
+from apps.access.models import UserRole
 from apps.access.services.permissions import get_user_permission_level, user_can
 from shared.tenancy.helpers import is_tenant_admin_user
 from apps.tenancy.models import PERMISSION_HIERARCHY
+
+
+class CanViewTenantUsers(BasePermission):
+    """Tenant admins, permissions viewers, and branch managers may list users."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if is_tenant_admin_user(user):
+            return True
+        level = get_user_permission_level(user, "permissions")
+        if PERMISSION_HIERARCHY.get(level, 0) >= PERMISSION_HIERARCHY.get("view", 0):
+            return True
+        return UserRole.objects.filter(
+            user_id=user.id, role__slug="branch_manager"
+        ).exists()
 
 
 class HasFeaturePermission(BasePermission):
