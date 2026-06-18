@@ -3,6 +3,7 @@
 from rest_framework.permissions import BasePermission
 
 from apps.access.services.permissions import get_user_permission_level, user_can
+from shared.tenancy.helpers import is_tenant_admin_user
 from apps.tenancy.models import PERMISSION_HIERARCHY
 
 
@@ -39,7 +40,7 @@ class IsRoleAdmin(BasePermission):
         user = request.user
         if not (user and user.is_authenticated):
             return False
-        if user.is_superuser or user.is_staff:
+        if is_tenant_admin_user(user):
             return True
         actual = get_user_permission_level(user, "permissions")
         return PERMISSION_HIERARCHY.get(actual, 0) >= PERMISSION_HIERARCHY.get(
