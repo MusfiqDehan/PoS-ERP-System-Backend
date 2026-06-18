@@ -3,8 +3,14 @@ from __future__ import annotations
 from apps.access.models import UserRole
 
 
+def user_has_tenant_admin_role(user) -> bool:
+    if not (user and user.is_authenticated):
+        return False
+    return UserRole.objects.filter(user_id=user.id, role__slug="admin").exists()
+
+
 def is_tenant_admin_user(user) -> bool:
-    return bool(user and user.is_authenticated and (user.is_superuser or user.is_staff))
+    return user_has_tenant_admin_role(user)
 
 
 def get_branch_manager_scope_ids(user):
