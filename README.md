@@ -22,8 +22,9 @@ Django 6 multi-tenant Point of Sale API built with **django-tenants**, **Django 
 ```bash
 cd Sortorium_Backend
 
-# 1. Create environment file
+# 1. Create environment files
 cp .env.example .env.local
+cp .env.local.celery.example .env.local.celery
 
 # 2. Edit .env.local — at minimum set POSTGRES_* and SUPERADMIN_* values.
 #    For Docker Compose, DATABASE_URL should point at the db service:
@@ -80,20 +81,37 @@ DJANGO_SETTINGS_MODULE=config.settings.local python manage.py migrate_schemas --
 Copy the template and maintain separate files per environment:
 
 ```bash
-cp .env.example .env.local   # local Docker / development
-cp .env.example .env.prod    # production
+cp .env.example .env.local
+cp .env.local.celery.example .env.local.celery
+cp .env.example .env.prod
+cp .env.pgbouncer.prod.example .env.pgbouncer.prod
 ```
+
+### Env file layout
+
+Docker Compose loads configuration **only** from env files — no inline `environment:` blocks in compose.
+
+| File | Used by |
+|------|---------|
+| `.env.local` | `backend`, `db`, shared vars for Celery |
+| `.env.local.celery` | `celery_worker`, `celery_beat` (local only; sets `SKIP_DB_BOOTSTRAP=1`) |
+| `.env.prod` | `backend`, `celery_worker`, `celery_beat`, `db` |
+| `.env.pgbouncer.prod` | `pgbouncer` only (`DATABASE_URL` → `db:5432`, pool settings) |
+
+Example templates (committed): `.env.example`, `.env.local.celery.example`, `.env.pgbouncer.prod.example`
 
 ### Key variables
 
 | Variable | Local (Docker) | Production |
 |----------|----------------|------------|
-| `DJANGO_SETTINGS_MODULE` | `config.settings.local` (set in compose) | `config.settings` (set in compose) |
+| `DJANGO_SETTINGS_MODULE` | `config.settings.local` (in `.env.local`) | `config.settings` (in `.env.prod`) |
+| `SKIP_DB_BOOTSTRAP` | `1` in `.env.local.celery` only | `1` in `.env.prod` |
 | `DATABASE_URL` | `postgresql://…@db:5432/…` | `postgresql://…@pgbouncer:6432/…` |
 | `DIRECT_DATABASE_URL` | — | `postgresql://…@db:5432/…` (migrations only) |
-| `REDIS_*` / `CELERY_*` | `redis://redis:6379/…` (compose override) | `redis://redis:6379/…` |
+| `REDIS_*` / `CELERY_*` | `redis://redis:6379/…` in `.env.local` | `redis://redis:6379/…` in `.env.prod` |
 | `PUBLIC_DOMAIN` | `localhost` | `sortorium.com` |
 | `PORT` | `8002` | `8002` |
+| `ASGI_WORKERS` | — | `2` in `.env.prod` |
 
 **Host machine access** (connecting to Docker-published ports without joining the compose network):
 
@@ -123,7 +141,7 @@ Production uses `docker-compose.prod.yml` with Traefik for TLS termination, PgBo
 
 1. **DNS** — `sortorium.com` and `*.sortorium.com` point to the host
 2. **Traefik** — running with external network `traefik_proxy` and ACME resolver `letsencrypt`
-3. **Environment** — `.env.prod` configured (see below)
+3. **Environment** — `.env.prod` and `.env.pgbouncer.prod` configured (see below)
 4. **PostgreSQL config** — `deploy/postgresql.conf` present on the host (referenced by compose)
 5. **Firewall** — restrict host ports `5452` (Postgres) and `6380` (Redis) to trusted IPs if exposed
 
@@ -280,9 +298,13 @@ Sortorium_Backend/
 ├── docker-compose.prod.yml
 ├── Dockerfile
 ├── entrypoint.sh          # Migrations, seeding, superadmin bootstrap
-├── .env.example           # Environment template
-├── .env.local             # Local secrets (git-ignored)
-└── .env.prod              # Production secrets (git-ignored)
+├── .env.example               # Main environment template
+├── .env.local.celery.example  # Local Celery override template
+├── .env.pgbouncer.prod.example  # Production PgBouncer template
+├── .env.local                 # Local secrets (git-ignored)
+├── .env.local.celery          # Local Celery secrets (git-ignored)
+├── .env.prod                  # Production secrets (git-ignored)
+└── .env.pgbouncer.prod        # PgBouncer secrets (git-ignored)
 ```
 
 ## Troubleshooting
