@@ -249,13 +249,17 @@ class TenantRegistrationService:
 
     @staticmethod
     def bootstrap_tenant_schema(tenant: Tenant) -> None:
-        """Seed default branch and tenant roles after schema creation."""
+        """Seed default Main Branch and tenant roles after schema creation."""
         with schema_context(tenant.schema_name):
             from apps.branch.models import Branch
 
             Branch.objects.get_or_create(
-                code="HQ",
-                defaults={"name": f"{tenant.name} HQ", "is_headquarters": True},
+                code="MAIN",
+                defaults={
+                    "name": "Main Branch",
+                    "is_headquarters": True,
+                    "status": Branch.STATUS_ACTIVE,
+                },
             )
             from django.core.management import call_command
 
