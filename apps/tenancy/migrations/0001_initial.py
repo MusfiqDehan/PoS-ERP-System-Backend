@@ -156,8 +156,19 @@ class Migration(migrations.Migration):
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("is_active", models.BooleanField(default=True, help_text="Whether this item is active and usable")),
-                ("is_published", models.BooleanField(default=False, help_text="Whether this item is published/visible")),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True, help_text="Whether this item is active and usable"
+                    ),
+                ),
+                (
+                    "is_published",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Whether this item is published/visible",
+                    ),
+                ),
                 ("is_deleted", models.BooleanField(default=False)),
                 ("deleted_at", models.DateTimeField(blank=True, null=True)),
                 ("password", models.CharField(max_length=128)),
