@@ -13,8 +13,10 @@ from apps.tenancy.views.password import (
 from apps.tenancy.views.platform_admin import (
     CurrentTenantFeaturesView,
     TenantAdminListView,
+    TenantFeatureOverrideView,
 )
 from apps.tenancy.views.register import TenantSelfRegistrationView
+from apps.tenancy.views.users import TenantUserListView
 
 __all__ = [
     "ChangePasswordView",
@@ -25,7 +27,9 @@ __all__ = [
     "PasswordResetRequestView",
     "PasswordSetupView",
     "TenantAdminListView",
+    "TenantFeatureOverrideView",
     "TenantAuthenticationView",
     "TenantSelfRegistrationView",
+    "TenantUserListView",
     "TokenRefreshView",
 ]
