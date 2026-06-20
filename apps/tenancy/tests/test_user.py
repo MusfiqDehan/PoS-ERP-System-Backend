@@ -44,9 +44,7 @@ def test_create_superadmin_assigns_role(public_schema):
     user = User.objects.create_superadmin(
         email="admin@example.com", password="TestPass1!"
     )
-    assert PlatformUserRole.objects.filter(
-        user=user, role__slug="superadmin"
-    ).exists()
+    assert PlatformUserRole.objects.filter(user=user, role__slug="superadmin").exists()
 
 
 @pytest.mark.django_db
