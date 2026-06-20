@@ -105,3 +105,16 @@ class User(BaseModel):
 
     def has_module_perms(self, app_label):
         return self.is_staff
+
+    def get_profile_picture_asset(self):
+        from shared.services.asset_attachment import (
+            AssetAttachmentService,
+            USER_PROFILE_PICTURE_FIELD,
+            USER_PROFILE_PICTURE_ROLE,
+        )
+
+        return AssetAttachmentService.get_primary_asset(
+            parent=self,
+            role=USER_PROFILE_PICTURE_ROLE,
+            field_name=USER_PROFILE_PICTURE_FIELD,
+        )
