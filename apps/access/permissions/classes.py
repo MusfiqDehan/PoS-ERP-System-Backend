@@ -7,6 +7,8 @@ from apps.access.services.permissions import get_user_permission_level, user_can
 from shared.tenancy.helpers import is_tenant_admin_user
 from apps.tenancy.models import PERMISSION_HIERARCHY
 
+TENANCY_MANAGE_BRANDING = "tenancy.manage_branding"
+
 
 class CanViewTenantUsers(BasePermission):
     """Tenant admins, permissions viewers, and branch managers may list users."""
@@ -61,6 +63,21 @@ class IsRoleAdmin(BasePermission):
         if is_tenant_admin_user(user):
             return True
         actual = get_user_permission_level(user, "permissions")
+        return PERMISSION_HIERARCHY.get(actual, 0) >= PERMISSION_HIERARCHY.get(
+            "edit", 0
+        )
+
+
+class CanManageTenantBranding(BasePermission):
+    """Allow tenant admins or users with settings edit-level (tenancy.manage_branding)."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if is_tenant_admin_user(user):
+            return True
+        actual = get_user_permission_level(user, "settings")
         return PERMISSION_HIERARCHY.get(actual, 0) >= PERMISSION_HIERARCHY.get(
             "edit", 0
         )
