@@ -21,14 +21,14 @@ from shared.cache.helpers import (
 )
 
 
-@receiver(post_save, sender="tenancy.PlatformPackage")
-@receiver(post_delete, sender="tenancy.PlatformPackage")
+@receiver(post_save, sender="billing.Package")
+@receiver(post_delete, sender="billing.Package")
 def invalidate_public_packages_on_package_change(sender, **kwargs):
     invalidate_public_packages()
 
 
-@receiver(post_save, sender="tenancy.PlatformPackageFeature")
-@receiver(post_delete, sender="tenancy.PlatformPackageFeature")
+@receiver(post_save, sender="billing.PackageFeature")
+@receiver(post_delete, sender="billing.PackageFeature")
 def invalidate_public_packages_on_package_feature_change(sender, **kwargs):
     invalidate_public_packages()
 
@@ -83,8 +83,8 @@ def invalidate_tenant_overview_on_invitation_change(sender, **kwargs):
     invalidate_tenant_overview()
 
 
-@receiver(post_save, sender="gym_branch.Branch")
-@receiver(post_delete, sender="gym_branch.Branch")
+@receiver(post_save, sender="branch.Branch")
+@receiver(post_delete, sender="branch.Branch")
 def invalidate_public_branches_on_branch_change(sender, **kwargs):
     schema_name = connection.schema_name
     if schema_name and schema_name != "public":
