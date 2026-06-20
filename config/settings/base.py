@@ -43,6 +43,7 @@ ALLOWED_HOSTS = [
 SHARED_APPS = [
     "django_tenants",
     "apps.tenancy.apps.TenancyConfig",
+    "apps.billing.apps.BillingConfig",
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.admin",
@@ -60,6 +61,7 @@ TENANT_APPS = [
     "apps.tenancy.apps.TenancyConfig",
     "apps.access.apps.AccessConfig",
     "apps.branch.apps.BranchConfig",
+    "apps.billing.apps.BillingConfig",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
