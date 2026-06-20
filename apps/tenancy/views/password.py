@@ -87,7 +87,10 @@ class PasswordSetupView(APIView):
     request=PasswordResetRequestSerializer,
     summary="Request a tenant password reset email",
     responses=envelope_responses(
-        (status.HTTP_200_OK, "Generic success message regardless of account existence."),
+        (
+            status.HTTP_200_OK,
+            "Generic success message regardless of account existence.",
+        ),
     ),
 )
 class PasswordResetRequestView(APIView):
