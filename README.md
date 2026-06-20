@@ -108,7 +108,8 @@ Example templates (committed): `.env.example`, `.env.local.celery.example`, `.en
 | `SKIP_DB_BOOTSTRAP` | `1` in `.env.local.celery` only | `1` in `.env.prod` |
 | `DATABASE_URL` | `postgresql://…@db:5432/…` | `postgresql://…@pgbouncer:6432/…` |
 | `DIRECT_DATABASE_URL` | — | `postgresql://…@db:5432/…` (migrations only) |
-| `REDIS_*` / `CELERY_*` | `redis://redis:6379/…` in `.env.local` | `redis://redis:6379/…` in `.env.prod` |
+| `REDIS_PASSWORD` | `sortorium_redis_local` in `.env.local` | Strong secret in `.env.prod` (must match URLs below) |
+| `REDIS_*` / `CELERY_*` | `redis://:PASSWORD@redis:6379/…` in `.env.local` | `redis://:PASSWORD@redis:6379/…` in `.env.prod` |
 | `PUBLIC_DOMAIN` | `localhost` | `sortorium.com` |
 | `PORT` | `8002` | `8002` |
 | `ASGI_WORKERS` | — | `2` in `.env.prod` |
@@ -116,7 +117,7 @@ Example templates (committed): `.env.example`, `.env.local.celery.example`, `.en
 **Host machine access** (connecting to Docker-published ports without joining the compose network):
 
 - PostgreSQL: `localhost:5452`
-- Redis: `localhost:6380`
+- Redis: `localhost:6380` (auth required — see `REDIS_PASSWORD` in `.env.local`)
 - Backend: `localhost:8002`
 
 See `.env.example` for the full list including CORS, CSRF, tenancy, email, and rate-limit settings.
@@ -313,10 +314,21 @@ Sortorium_Backend/
 Use port `5452`, not `5432`, when connecting from outside Docker.
 
 **Backend cannot connect to Redis from the host**  
-Use port `6380`, not `6379`.
+Use port `6380`, not `6379`. Include the password: `redis-cli -a "$REDIS_PASSWORD" -p 6380 ping` or `redis://:PASSWORD@localhost:6380/0`.
+
+**Redis startup warning about authentication**  
+Ensure `REDIS_PASSWORD` is set in `.env.local` / `.env.prod` and matches the password embedded in `REDIS_*` / `CELERY_*` URLs, then recreate the container: `docker compose -f docker-compose.local.yml up -d --force-recreate redis`.
+
+**Redis `Memory overcommit must be enabled` warning**  
+`vm.overcommit_memory` is a host kernel setting (not per-container). Compose runs a one-shot `redis-sysctl-init` service before Redis to set it. If the warning persists (e.g. Docker Desktop without privileged init), run on the Linux/WSL host:
+
+```bash
+sudo sysctl vm.overcommit_memory=1
+# persist: sudo ./scripts/redis-host-sysctl.sh
+```
 
 **Celery tasks not running**  
-Check `celery_worker` logs and confirm `CELERY_BROKER_URL` resolves to `redis:6379` inside the compose network.
+Check `celery_worker` logs and confirm `CELERY_BROKER_URL` resolves to `redis://:PASSWORD@redis:6379/0` inside the compose network.
 
 **Production 502 / healthcheck failing**  
 Confirm Daphne listens on port `8002`, `PUBLIC_DOMAIN` matches Traefik host rules, and Traefik targets `loadbalancer.server.port=8002`.
