@@ -24,7 +24,10 @@ from shared.responses.error_codes import ErrorCode
     request=TenantAuthSerializer,
     summary="Authenticate a tenant user",
     responses=envelope_responses(
-        (status.HTTP_200_OK, "Login successful; returns JWT access and refresh tokens."),
+        (
+            status.HTTP_200_OK,
+            "Login successful; returns JWT access and refresh tokens.",
+        ),
         (status.HTTP_401_UNAUTHORIZED, "Invalid credentials."),
         (status.HTTP_403_FORBIDDEN, "Tenant access denied."),
     ),
