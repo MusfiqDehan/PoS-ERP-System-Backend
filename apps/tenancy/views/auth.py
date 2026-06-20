@@ -18,6 +18,7 @@ from apps.tenancy.services import AuthService, PasswordService, TenantAuditServi
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
+from shared.services.asset_attachment import serialize_asset_summary
 
 
 @public_post_schema(
@@ -70,16 +71,20 @@ class TenantAuthenticationView(APIView):
             target_id=tokens.user.id,
             metadata={"email": payload["email"], "domain": tokens.domain},
         )
+        tenant_payload = {
+            "id": str(tokens.tenant.id),
+            "name": tokens.tenant.name,
+            "schema_name": tokens.tenant.schema_name,
+            "domain": tokens.domain,
+        }
+        company_logo = serialize_asset_summary(tokens.tenant.get_company_logo_asset())
+        if company_logo is not None:
+            tenant_payload["company_logo"] = company_logo
         return success_response(
             data={
                 "access": tokens.access,
                 "refresh": tokens.refresh,
-                "tenant": {
-                    "id": str(tokens.tenant.id),
-                    "name": tokens.tenant.name,
-                    "schema_name": tokens.tenant.schema_name,
-                    "domain": tokens.domain,
-                },
+                "tenant": tenant_payload,
             },
             message="Login successful.",
         )
