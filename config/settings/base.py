@@ -44,6 +44,7 @@ SHARED_APPS = [
     "django_tenants",
     "apps.tenancy.apps.TenancyConfig",
     "apps.billing.apps.BillingConfig",
+    "shared.apps.SharedConfig",
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.admin",
@@ -58,6 +59,7 @@ SHARED_APPS = [
 TENANT_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
+    "shared.apps.SharedConfig",
     "apps.tenancy.apps.TenancyConfig",
     "apps.access.apps.AccessConfig",
     "apps.branch.apps.BranchConfig",
