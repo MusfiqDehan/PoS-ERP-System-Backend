@@ -79,6 +79,19 @@ class Tenant(UUIDPrimaryKeyMixin, TenantMixin):
     def allows_user_entry(self) -> bool:
         return self.is_enabled and self.status in self.ENTRY_ALLOWED_STATUSES
 
+    def get_company_logo_asset(self):
+        from shared.services.asset_attachment import (
+            AssetAttachmentService,
+            TENANT_COMPANY_LOGO_FIELD,
+            TENANT_COMPANY_LOGO_ROLE,
+        )
+
+        return AssetAttachmentService.get_primary_asset(
+            parent=self,
+            role=TENANT_COMPANY_LOGO_ROLE,
+            field_name=TENANT_COMPANY_LOGO_FIELD,
+        )
+
 
 class Domain(UUIDPrimaryKeyMixin, DomainMixin):
     class Meta:
