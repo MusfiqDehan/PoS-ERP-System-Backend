@@ -98,7 +98,9 @@ def test_audit_service_log(public_schema, tenant, rf):
 def test_platform_permission_superadmin_full_map(public_schema):
     from apps.tenancy.models import User
 
-    admin = User.objects.create_superadmin(email="admin@test.com", password="TestPass1!")
+    admin = User.objects.create_superadmin(
+        email="admin@test.com", password="TestPass1!"
+    )
     perm_map = PlatformPermissionService.get_permission_map(admin)
     assert perm_map
     assert all(level == "full" for level in perm_map.values())
