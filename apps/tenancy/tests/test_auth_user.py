@@ -21,7 +21,9 @@ def test_platform_is_superadmin_via_role(public_schema):
     user = User.objects.create_user(email="plain@test.com", password="TestPass1!")
     assert PlatformPermissionService.is_superadmin(user) is False
 
-    admin = User.objects.create_superadmin(email="admin@test.com", password="TestPass1!")
+    admin = User.objects.create_superadmin(
+        email="admin@test.com", password="TestPass1!"
+    )
     assert PlatformPermissionService.is_superadmin(admin) is True
 
 
