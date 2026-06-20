@@ -7,9 +7,13 @@ from apps.tenancy.models import Tenant
 from apps.tenancy.openapi import PLATFORM_TENANCY_TAG, TENANT_TENANCY_TAG
 from apps.tenancy.permissions import IsPlatformFeaturePermission
 from apps.tenancy.serializers import TenantListSerializer
-from apps.tenancy.services import get_tenant_enabled_feature_keys
+from apps.tenancy.services import (
+    get_tenant_enabled_feature_keys,
+    patch_tenant_feature_overrides,
+)
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from shared.responses import success_response
+from shared.responses import error_response, success_response
+from shared.responses.error_codes import ErrorCode
 from shared.views import ModelCRUDView
 
 
@@ -62,4 +66,44 @@ class CurrentTenantFeaturesView(APIView):
         features = sorted(get_tenant_enabled_feature_keys(tenant))
         return success_response(
             data={"features": features}, message="Features retrieved."
+        )
+
+
+class TenantFeatureOverrideView(APIView):
+    permission_classes = [
+        IsPlatformFeaturePermission.require("platform.tenants", "edit")
+    ]
+
+    def get(self, request, tenant_id):
+        tenant = Tenant.objects.filter(pk=tenant_id).first()
+        if tenant is None:
+            return error_response(
+                message="Tenant not found.",
+                error_code=str(ErrorCode.TENANT_NOT_FOUND),
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+        return success_response(
+            data={"features": tenant.features or {}},
+            message="Tenant feature overrides retrieved.",
+        )
+
+    def patch(self, request, tenant_id):
+        tenant = Tenant.objects.filter(pk=tenant_id).first()
+        if tenant is None:
+            return error_response(
+                message="Tenant not found.",
+                error_code=str(ErrorCode.TENANT_NOT_FOUND),
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+        overrides = request.data.get("features")
+        if not isinstance(overrides, dict):
+            return error_response(
+                message="features object is required.",
+                error_code=str(ErrorCode.VALIDATION_ERROR),
+                http_status=status.HTTP_400_BAD_REQUEST,
+            )
+        merged = patch_tenant_feature_overrides(tenant, overrides)
+        return success_response(
+            data={"features": merged},
+            message="Tenant feature overrides updated.",
         )
