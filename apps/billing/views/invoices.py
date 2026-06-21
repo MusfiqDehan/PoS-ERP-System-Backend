@@ -120,6 +120,10 @@ def _pdf_response(request, invoice, *, invoice_ref: str) -> HttpResponse:
 @extend_schema(
     tags=[TENANT_BILLING_TAG],
     summary="List tenant subscription invoices (tenant admin)",
+    description=(
+        "Lists subscription invoices for the current tenant. Only tenant administrators "
+        "can access this endpoint."
+    ),
     responses={
         status.HTTP_200_OK: OpenApiResponse(description="Invoice list envelope.")
     },
@@ -151,6 +155,10 @@ class TenantSubscriptionInvoiceListView(APIView):
 @extend_schema(
     tags=[TENANT_BILLING_TAG],
     summary="Download tenant subscription invoice PDF",
+    description=(
+        "Downloads a subscription invoice PDF for the current tenant. Returns binary "
+        "application/pdf content. Only tenant administrators can access this endpoint."
+    ),
     responses={status.HTTP_200_OK: OpenApiResponse(description="application/pdf")},
 )
 class TenantSubscriptionInvoicePdfView(APIView):
@@ -184,6 +192,10 @@ class TenantSubscriptionInvoicePdfView(APIView):
 @extend_schema(
     tags=[PLATFORM_BILLING_TAG],
     summary="List subscription invoices across tenants (platform admin)",
+    description=(
+        "Returns paginated subscription invoices across all tenants with aggregate "
+        "payment statistics. Requires platform.billing view permission."
+    ),
     responses={
         status.HTTP_200_OK: OpenApiResponse(description="Paginated invoice list.")
     },
@@ -235,6 +247,11 @@ class PlatformSubscriptionInvoiceListView(APIView):
 @extend_schema(
     tags=[PLATFORM_BILLING_TAG],
     summary="Update subscription invoice (platform admin)",
+    description=(
+        "Partially updates a subscription invoice record. Requires platform.billing "
+        "edit permission."
+    ),
+    request=PlatformSubscriptionInvoiceUpdateSerializer,
     responses={status.HTTP_200_OK: OpenApiResponse(description="Updated invoice.")},
 )
 class PlatformSubscriptionInvoiceDetailView(APIView):
@@ -265,6 +282,10 @@ class PlatformSubscriptionInvoiceDetailView(APIView):
 @extend_schema(
     tags=[PLATFORM_BILLING_TAG],
     summary="Download subscription invoice PDF (platform admin)",
+    description=(
+        "Downloads a subscription invoice PDF for any tenant. Returns binary "
+        "application/pdf content. Requires platform.billing view permission."
+    ),
     responses={status.HTTP_200_OK: OpenApiResponse(description="application/pdf")},
 )
 class PlatformSubscriptionInvoicePdfView(APIView):
