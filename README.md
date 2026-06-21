@@ -104,7 +104,7 @@ Example templates (committed): `.env.example`, `.env.local.celery.example`, `.en
 
 | Variable | Local (Docker) | Production |
 |----------|----------------|------------|
-| `DJANGO_SETTINGS_MODULE` | `config.settings.local` (in `.env.local`) | `config.settings` (in `.env.prod`) |
+| `DJANGO_SETTINGS_MODULE` | `config.settings.local` (in `.env.local`) | `config.settings.production` (in `.env.prod`) |
 | `SKIP_DB_BOOTSTRAP` | `1` in `.env.local.celery` only | `1` in `.env.prod` |
 | `DATABASE_URL` | `postgresql://…@db:5432/…` | `postgresql://…@pgbouncer:6432/…` |
 | `DIRECT_DATABASE_URL` | — | `postgresql://…@db:5432/…` (migrations only) |
