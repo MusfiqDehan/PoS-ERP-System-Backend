@@ -1,11 +1,13 @@
 from django.db import connection
 from django.db.models import Count
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.access.permissions import HasFeaturePermission
 from apps.branch.models import Branch
+from apps.branch.openapi import PUBLIC_BRANCH_TAG, TENANT_BRANCH_TAG, document_crud_view
 from apps.branch.serializers.branch import (
     BranchMinimalSerializer,
     BranchSerializer,
@@ -24,6 +26,25 @@ from shared.tenancy.limits import total_capacity_exceeded
 from shared.views import ModelCRUDView
 
 
+@document_crud_view(
+    tags=[TENANT_BRANCH_TAG],
+    operations={
+        "GET": {
+            "summary": "List branches",
+            "description": (
+                "Lists branches visible to the caller based on branch access rules. "
+                "Requires branches view permission."
+            ),
+        },
+        "POST": {
+            "summary": "Create branch",
+            "description": (
+                "Creates a branch when tenant capacity allows. Requires branches edit "
+                "permission."
+            ),
+        },
+    },
+)
 class BranchListCreateView(ModelCRUDView):
     queryset = Branch.objects.select_related("manager").order_by(
         "display_order", "name"
@@ -65,6 +86,35 @@ class BranchListCreateView(ModelCRUDView):
         }.get(action, "Operation successful.")
 
 
+@document_crud_view(
+    tags=[TENANT_BRANCH_TAG],
+    operations={
+        "GET": {
+            "summary": "Retrieve branch",
+            "description": (
+                "Returns a single branch by ID. Requires branches view permission."
+            ),
+        },
+        "PUT": {
+            "summary": "Replace branch",
+            "description": (
+                "Replaces a branch by ID. Requires branches edit permission."
+            ),
+        },
+        "PATCH": {
+            "summary": "Update branch",
+            "description": (
+                "Partially updates a branch by ID. Requires branches edit permission."
+            ),
+        },
+        "DELETE": {
+            "summary": "Delete branch",
+            "description": (
+                "Deletes a branch by ID. Requires branches edit permission."
+            ),
+        },
+    },
+)
 class BranchDetailView(BranchListCreateView):
     def get_permissions(self):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
@@ -72,6 +122,18 @@ class BranchDetailView(BranchListCreateView):
         return [HasFeaturePermission.require("branches", "edit")()]
 
 
+@extend_schema(
+    tags=[PUBLIC_BRANCH_TAG],
+    summary="List public branches",
+    description=(
+        "Returns active branches for the resolved tenant schema without authentication. "
+        "Supports homepage=true to filter branches shown on the storefront."
+    ),
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(description="Public branch list envelope."),
+    },
+    auth=[],
+)
 class PublicBranchListView(APIView):
     permission_classes = [AllowAny]
 
@@ -94,6 +156,20 @@ class PublicBranchListView(APIView):
         )
 
 
+@extend_schema(
+    tags=[PUBLIC_BRANCH_TAG],
+    summary="List public branches (minimal)",
+    description=(
+        "Returns a minimal active branch listing for the resolved tenant schema without "
+        "authentication."
+    ),
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(
+            description="Minimal public branch list envelope."
+        ),
+    },
+    auth=[],
+)
 class PublicBranchMinimalListView(APIView):
     permission_classes = [AllowAny]
 
@@ -113,6 +189,18 @@ class PublicBranchMinimalListView(APIView):
         )
 
 
+@extend_schema(
+    tags=[TENANT_BRANCH_TAG],
+    summary="Get branch summary metrics",
+    description=(
+        "Returns branch summary metrics including staff and user counts. Only tenant "
+        "administrators can access this endpoint."
+    ),
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(description="Branch summary envelope."),
+        status.HTTP_403_FORBIDDEN: OpenApiResponse(description="Permission denied."),
+    },
+)
 class BranchSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -145,6 +233,25 @@ class BranchSummaryView(APIView):
         )
 
 
+@extend_schema(
+    tags=[TENANT_BRANCH_TAG],
+    summary="Assign branch manager",
+    description=(
+        "Assigns a tenant user as the manager for a branch. Requires branches edit "
+        "permission."
+    ),
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {"user_id": {"type": "string", "format": "uuid"}},
+            "required": ["user_id"],
+        }
+    },
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(description="Updated branch envelope."),
+        status.HTTP_404_NOT_FOUND: OpenApiResponse(description="Branch or user not found."),
+    },
+)
 class BranchManagerAssignView(APIView):
     permission_classes = [HasFeaturePermission.require("branches", "edit")]
 
