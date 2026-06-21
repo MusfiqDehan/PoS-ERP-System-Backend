@@ -1,9 +1,16 @@
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.billing.models import PaymentGateway, TenantPaymentGateway
+from apps.billing.openapi import (
+    PLATFORM_BILLING_TAG,
+    TENANT_BILLING_TAG,
+    document_crud_view,
+    envelope_responses,
+)
 from apps.billing.serializers.gateway import (
     PaymentGatewaySerializer,
     PaymentGatewayWriteSerializer,
@@ -15,6 +22,25 @@ from shared.responses import success_response
 from shared.views import ModelCRUDView
 
 
+@document_crud_view(
+    tags=[PLATFORM_BILLING_TAG],
+    operations={
+        "GET": {
+            "summary": "List payment gateways (platform admin)",
+            "description": (
+                "Lists configured payment gateways for the platform. Requires "
+                "platform.billing view permission."
+            ),
+        },
+        "POST": {
+            "summary": "Create payment gateway (platform admin)",
+            "description": (
+                "Creates a payment gateway definition. Requires platform.billing edit "
+                "permission."
+            ),
+        },
+    },
+)
 class PaymentGatewayListCreateView(ModelCRUDView):
     queryset = PaymentGateway.objects.all().order_by("sort_order", "name")
     serializer_class = PaymentGatewayWriteSerializer
@@ -40,6 +66,45 @@ class PaymentGatewayListCreateView(ModelCRUDView):
         }.get(action, "Operation successful.")
 
 
+@extend_schema(
+    methods=["GET"],
+    tags=[PLATFORM_BILLING_TAG],
+    summary="Retrieve payment gateway (platform admin)",
+    description=(
+        "Returns a payment gateway by slug. Requires platform.billing view permission."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Payment gateway envelope."),
+        (status.HTTP_404_NOT_FOUND, "Gateway not found."),
+    ),
+)
+@extend_schema(
+    methods=["PATCH"],
+    tags=[PLATFORM_BILLING_TAG],
+    summary="Update payment gateway (platform admin)",
+    description=(
+        "Partially updates a payment gateway by slug. Requires platform.billing edit "
+        "permission."
+    ),
+    request=PaymentGatewayWriteSerializer,
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Updated payment gateway envelope."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_404_NOT_FOUND, "Gateway not found."),
+    ),
+)
+@extend_schema(
+    methods=["DELETE"],
+    tags=[PLATFORM_BILLING_TAG],
+    summary="Delete payment gateway (platform admin)",
+    description=(
+        "Deletes a payment gateway by slug. Requires platform.billing edit permission."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Gateway deleted envelope."),
+        (status.HTTP_404_NOT_FOUND, "Gateway not found."),
+    ),
+)
 class PaymentGatewayDetailView(APIView):
     def get_permissions(self):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
@@ -71,6 +136,46 @@ class PaymentGatewayDetailView(APIView):
         return success_response(data={}, message="Payment gateway deleted.")
 
 
+@extend_schema(
+    methods=["GET"],
+    tags=[TENANT_BILLING_TAG],
+    summary="List or retrieve tenant payment gateway configuration",
+    description=(
+        "Lists all tenant gateway configurations or returns one configuration when slug "
+        "is provided. Requires authentication."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Gateway configuration envelope."),
+        (status.HTTP_404_NOT_FOUND, "Gateway configuration not found."),
+    ),
+)
+@extend_schema(
+    methods=["POST"],
+    tags=[TENANT_BILLING_TAG],
+    summary="Create or update tenant payment gateway configuration",
+    description=(
+        "Creates or updates tenant-scoped gateway credentials for the slug provided in "
+        "the URL. Requires authentication."
+    ),
+    request=TenantPaymentGatewayWriteSerializer,
+    responses=envelope_responses(
+        (status.HTTP_201_CREATED, "Gateway configuration saved envelope."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+    ),
+)
+@extend_schema(
+    methods=["DELETE"],
+    tags=[TENANT_BILLING_TAG],
+    summary="Delete tenant payment gateway configuration",
+    description=(
+        "Removes tenant-scoped gateway credentials for the slug provided in the URL. "
+        "Requires authentication."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Gateway configuration removed envelope."),
+        (status.HTTP_404_NOT_FOUND, "Gateway configuration not found."),
+    ),
+)
 class TenantPaymentGatewayView(APIView):
     permission_classes = [IsAuthenticated]
 
