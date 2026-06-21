@@ -169,6 +169,8 @@ services:
     image: edoburu/pgbouncer:v1.25.2-p0
     container_name: sortorium-pgbouncer
     env_file: .env.pgbouncer.prod
+    environment:
+      LISTEN_PORT: "6432"
     depends_on:
       db:
         condition: service_healthy
@@ -188,6 +190,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./deploy/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./deploy/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
