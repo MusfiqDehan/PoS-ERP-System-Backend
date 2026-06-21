@@ -12,18 +12,27 @@ from apps.tenancy.services import (
     patch_tenant_feature_overrides,
 )
 from drf_spectacular.utils import OpenApiResponse, extend_schema
+from shared.openapi import document_crud_view, envelope_responses
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
 from shared.views import ModelCRUDView
 
 
-@extend_schema(
+@document_crud_view(
     tags=[PLATFORM_TENANCY_TAG],
-    summary="List tenants (platform admin)",
-    responses={
-        status.HTTP_200_OK: OpenApiResponse(
-            description="Cursor-paginated tenant list envelope."
-        ),
+    operations={
+        "GET": {
+            "summary": "List tenants (platform admin)",
+            "description": (
+                "Returns a cursor-paginated list of tenants for platform administrators. "
+                "Requires platform.tenants view permission."
+            ),
+            "responses": {
+                status.HTTP_200_OK: OpenApiResponse(
+                    description="Cursor-paginated tenant list envelope."
+                ),
+            },
+        },
     },
 )
 class TenantAdminListView(ModelCRUDView):
@@ -50,6 +59,11 @@ class TenantAdminListView(ModelCRUDView):
 @extend_schema(
     tags=[TENANT_TENANCY_TAG],
     summary="List enabled features for the current tenant",
+    description=(
+        "Returns feature keys enabled for the tenant resolved from the request host. "
+        "Requires authentication; returns an empty feature list when no tenant context "
+        "is available."
+    ),
     responses={
         status.HTTP_200_OK: OpenApiResponse(
             description="Feature keys enabled for the resolved tenant."
@@ -69,6 +83,45 @@ class CurrentTenantFeaturesView(APIView):
         )
 
 
+@extend_schema(
+    methods=["GET"],
+    tags=[PLATFORM_TENANCY_TAG],
+    summary="Read tenant feature overrides (platform admin)",
+    description=(
+        "Returns per-tenant feature override map for a platform administrator. Requires "
+        "platform.tenants edit permission."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Tenant feature overrides envelope."),
+        (status.HTTP_404_NOT_FOUND, "Tenant not found."),
+    ),
+)
+@extend_schema(
+    methods=["PATCH"],
+    tags=[PLATFORM_TENANCY_TAG],
+    summary="Update tenant feature overrides (platform admin)",
+    description=(
+        "Patches per-tenant feature overrides for a platform administrator. Requires "
+        "a features object in the request body and platform.tenants edit permission."
+    ),
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "features": {
+                    "type": "object",
+                    "additionalProperties": {"type": "boolean"},
+                }
+            },
+            "required": ["features"],
+        }
+    },
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Updated tenant feature overrides envelope."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_404_NOT_FOUND, "Tenant not found."),
+    ),
+)
 class TenantFeatureOverrideView(APIView):
     permission_classes = [
         IsPlatformFeaturePermission.require("platform.tenants", "edit")
