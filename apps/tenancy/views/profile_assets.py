@@ -21,6 +21,10 @@ from shared.services.asset_attachment import (
 @extend_schema(
     tags=[TENANT_TENANCY_TAG],
     summary="Upload or replace authenticated user profile picture",
+    description=(
+        "Uploads or replaces the authenticated user's profile picture using multipart "
+        "form data. Requires a valid JWT bearer token."
+    ),
     request={
         "multipart/form-data": {
             "type": "object",
@@ -78,6 +82,10 @@ class ProfilePictureView(APIView):
     @extend_schema(
         tags=[TENANT_TENANCY_TAG],
         summary="Remove authenticated user profile picture",
+        description=(
+            "Removes the authenticated user's profile picture attachment. Requires a "
+            "valid JWT bearer token."
+        ),
         responses={
             status.HTTP_200_OK: OpenApiResponse(
                 description="Profile picture removed envelope."
