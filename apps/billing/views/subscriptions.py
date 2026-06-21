@@ -2,11 +2,13 @@ from decimal import Decimal
 
 from django.db.models import Sum
 from django_tenants.utils import get_public_schema_name, schema_context
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.billing.models import TenantProductSubscription, TenantSubscriptionInvoice
+from apps.billing.openapi import PUBLIC_BILLING_TAG, TENANT_BILLING_TAG, envelope_responses
 from apps.billing.serializers.subscription import (
     InitiateSubscriptionChangeSerializer,
     TenantProductSubscriptionSerializer,
@@ -22,6 +24,17 @@ from shared.responses.error_codes import ErrorCode
 from shared.tenancy.helpers import is_tenant_admin_user
 
 
+@extend_schema(
+    tags=[TENANT_BILLING_TAG],
+    summary="Get tenant subscription summary",
+    description=(
+        "Returns active subscriptions, effective plan limits, and payment totals for the "
+        "current tenant. Only tenant administrators can access this endpoint."
+    ),
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(description="Subscription summary envelope.")
+    },
+)
 class SubscriptionSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -79,6 +92,22 @@ class SubscriptionSummaryView(APIView):
         return success_response(data=payload, message="Subscription summary retrieved.")
 
 
+@extend_schema(
+    tags=[TENANT_BILLING_TAG],
+    summary="Initiate tenant subscription change",
+    description=(
+        "Starts a subscription plan change for the current tenant and returns a payment "
+        "gateway redirect URL plus invoice metadata. Only tenant administrators can "
+        "access this endpoint."
+    ),
+    request=InitiateSubscriptionChangeSerializer,
+    responses=envelope_responses(
+        (status.HTTP_201_CREATED, "Subscription change initiated."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_403_FORBIDDEN, "Permission denied."),
+        (status.HTTP_503_SERVICE_UNAVAILABLE, "Payment gateway unavailable."),
+    ),
+)
 class InitiateSubscriptionChangeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -174,6 +203,31 @@ class _SubscriptionCallbackView(APIView):
         )
 
 
+@extend_schema(
+    tags=[PUBLIC_BILLING_TAG],
+    summary="Process subscription payment IPN callback",
+    description=(
+        "Receives instant payment notification callbacks from the payment gateway on "
+        "the public schema. No authentication is required; gateway validation is handled "
+        "server-side."
+    ),
+    request={
+        "application/x-www-form-urlencoded": {
+            "type": "object",
+            "properties": {
+                "tran_id": {"type": "string"},
+                "val_id": {"type": "string"},
+                "status": {"type": "string"},
+            },
+        }
+    },
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Payment callback processed."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_404_NOT_FOUND, "Invoice not found."),
+    ),
+    auth=[],
+)
 class SubscriptionIPNView(_SubscriptionCallbackView):
     def post(self, request):
         tran_id = request.data.get("tran_id") or request.POST.get("tran_id")
@@ -191,6 +245,21 @@ class SubscriptionIPNView(_SubscriptionCallbackView):
         return self._process(request, tran_id=tran_id)
 
 
+@extend_schema(
+    tags=[PUBLIC_BILLING_TAG],
+    summary="Handle successful subscription payment redirect",
+    description=(
+        "Browser redirect handler for successful subscription payments on the public "
+        "schema. Accepts tran_id as a query parameter and activates the subscription "
+        "when payment succeeded."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Payment callback processed."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_404_NOT_FOUND, "Invoice not found."),
+    ),
+    auth=[],
+)
 class SubscriptionSuccessView(_SubscriptionCallbackView):
     final_status = TenantSubscriptionInvoice.STATUS_SUCCESS
 
@@ -198,6 +267,20 @@ class SubscriptionSuccessView(_SubscriptionCallbackView):
         return self._process(request)
 
 
+@extend_schema(
+    tags=[PUBLIC_BILLING_TAG],
+    summary="Handle failed subscription payment redirect",
+    description=(
+        "Browser redirect handler for failed subscription payments on the public schema. "
+        "Accepts tran_id as a query parameter and marks the invoice as failed."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Payment callback processed."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_404_NOT_FOUND, "Invoice not found."),
+    ),
+    auth=[],
+)
 class SubscriptionFailView(_SubscriptionCallbackView):
     final_status = TenantSubscriptionInvoice.STATUS_FAILED
 
@@ -205,6 +288,21 @@ class SubscriptionFailView(_SubscriptionCallbackView):
         return self._process(request)
 
 
+@extend_schema(
+    tags=[PUBLIC_BILLING_TAG],
+    summary="Handle cancelled subscription payment redirect",
+    description=(
+        "Browser redirect handler for cancelled subscription payments on the public "
+        "schema. Accepts tran_id as a query parameter and marks the invoice as "
+        "cancelled."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Payment callback processed."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_404_NOT_FOUND, "Invoice not found."),
+    ),
+    auth=[],
+)
 class SubscriptionCancelView(_SubscriptionCallbackView):
     final_status = TenantSubscriptionInvoice.STATUS_CANCELLED
 
