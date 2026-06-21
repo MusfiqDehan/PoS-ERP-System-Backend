@@ -13,6 +13,11 @@ from shared.responses.error_codes import ErrorCode
 @public_post_schema(
     request=TenantSelfRegistrationSerializer,
     summary="Register a new tenant (self-service)",
+    description=(
+        "Starts self-service tenant registration on the public schema. Creates a pending "
+        "tenant workspace and sends a verification email. Rate limited to 10 requests "
+        "per hour."
+    ),
     responses=envelope_responses(
         (status.HTTP_201_CREATED, "Registration accepted; verification email sent."),
         (status.HTTP_400_BAD_REQUEST, "Validation or subdomain conflict error."),
