@@ -372,7 +372,53 @@ SPECTACULAR_SETTINGS = {
             }
         }
     },
-    "SWAGGER_UI_SETTINGS": {"persistAuthorization": True},
+    "TAGS": [
+        {
+            "name": "Tenancy - Public",
+            "description": "Unauthenticated public-schema tenant onboarding, auth, and password flows.",
+        },
+        {
+            "name": "Tenancy - Tenant",
+            "description": "Authenticated tenant-scoped user, branding, and settings operations.",
+        },
+        {
+            "name": "Tenancy - Platform Admin",
+            "description": "Platform administrator operations for tenant lifecycle and feature overrides.",
+        },
+        {
+            "name": "Billing - Public",
+            "description": "Unauthenticated payment gateway callbacks and subscription redirect handlers.",
+        },
+        {
+            "name": "Billing - Tenant",
+            "description": "Tenant administrator subscription, invoice, and gateway configuration operations.",
+        },
+        {
+            "name": "Billing - Platform Admin",
+            "description": "Platform administrator billing catalog, gateways, packages, and invoice management.",
+        },
+        {
+            "name": "Access - Tenant",
+            "description": "Tenant-scoped role-based access control for roles, permissions, and assignments.",
+        },
+        {
+            "name": "Branch - Public",
+            "description": "Unauthenticated read-only branch listings for tenant storefronts.",
+        },
+        {
+            "name": "Branch - Tenant",
+            "description": "Authenticated tenant branch management, summaries, and manager assignment.",
+        },
+    ],
+    "POSTPROCESSING_HOOKS": [
+        "config.openapi.enforce_operation_descriptions",
+    ],
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "displayOperationId": False,
+        "docExpansion": "list",
+        "filter": True,
+    },
 }
 
 EMAIL_BACKEND = os.environ.get(
