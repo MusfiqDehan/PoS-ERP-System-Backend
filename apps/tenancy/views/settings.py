@@ -31,6 +31,10 @@ def _resolve_request_tenant(request):
 @extend_schema(
     tags=[TENANT_TENANCY_TAG],
     summary="Read current tenant branding settings",
+    description=(
+        "Returns branding settings for the resolved tenant, including company display "
+        "metadata. Requires CanManageTenantBranding permission."
+    ),
     responses={
         status.HTTP_200_OK: OpenApiResponse(description="Tenant branding envelope."),
     },
@@ -55,6 +59,10 @@ class TenantBrandingView(APIView):
 @extend_schema(
     tags=[TENANT_TENANCY_TAG],
     summary="Upload or replace current tenant company logo",
+    description=(
+        "Uploads or replaces the tenant company logo using multipart form data. "
+        "Requires CanManageTenantBranding permission."
+    ),
     request={
         "multipart/form-data": {
             "type": "object",
@@ -117,6 +125,10 @@ class TenantCompanyLogoView(APIView):
     @extend_schema(
         tags=[TENANT_TENANCY_TAG],
         summary="Remove current tenant company logo",
+        description=(
+            "Removes the current tenant company logo attachment. Requires "
+            "CanManageTenantBranding permission."
+        ),
         responses={
             status.HTTP_200_OK: OpenApiResponse(
                 description="Company logo removed envelope."
