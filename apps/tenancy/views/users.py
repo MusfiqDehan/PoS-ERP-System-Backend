@@ -2,13 +2,12 @@
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
 
 from apps.access.permissions import CanViewTenantUsers
 from apps.tenancy.openapi import TENANT_TENANCY_TAG
 from apps.tenancy.serializers.tenant_user import TenantUserListSerializer
 from shared.models import AssetRelation
+from shared.openapi import document_crud_view
 from shared.services.asset_attachment import (
     USER_PROFILE_PICTURE_FIELD,
     USER_PROFILE_PICTURE_ROLE,
@@ -37,11 +36,17 @@ def build_profile_picture_asset_map(user_ids):
     }
 
 
-@extend_schema(
+@document_crud_view(
     tags=[TENANT_TENANCY_TAG],
-    summary="List tenant users (branch-scoped)",
-    responses={
-        status.HTTP_200_OK: OpenApiResponse(description="Tenant user list envelope.")
+    operations={
+        "GET": {
+            "summary": "List tenant users (branch-scoped)",
+            "description": (
+                "Lists active tenant users visible to the caller based on branch access "
+                "rules. Supports an optional branch query filter. Requires "
+                "CanViewTenantUsers permission."
+            ),
+        },
     },
 )
 class TenantUserListView(ModelCRUDView):
