@@ -9,6 +9,7 @@ from apps.access.models import RolePermission, UserRole
 from apps.tenancy.models import PERMISSION_HIERARCHY
 from apps.tenancy.services import tenant_has_feature
 from shared.cache.helpers import PERMISSION_TTL, get_cached_value, permission_map_key
+from shared.tenancy.helpers import is_tenant_admin_user
 
 
 def is_in_tenant_schema() -> bool:
@@ -44,7 +45,7 @@ def _compute_user_permission_map(user) -> dict[str, str]:
 def get_user_permission_map(user) -> dict[str, str]:
     if not (user and user.is_authenticated):
         return {}
-    if user.is_superuser or user.is_staff:
+    if is_tenant_admin_user(user):
         return {}
     return get_cached_value(
         permission_map_key(connection.schema_name, user.id),
@@ -56,7 +57,7 @@ def get_user_permission_map(user) -> dict[str, str]:
 def get_user_permission_level(user, feature_key: str) -> str:
     if not (user and user.is_authenticated):
         return "none"
-    if user.is_superuser or user.is_staff:
+    if is_tenant_admin_user(user):
         return "full"
     return get_user_permission_map(user).get(feature_key, "none")
 

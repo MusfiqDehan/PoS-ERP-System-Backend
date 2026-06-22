@@ -1,28 +1,36 @@
 """drf-spectacular helpers for tenancy API documentation."""
 
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import extend_schema
+
+from shared.openapi import envelope_responses
 
 PUBLIC_TENANCY_TAG = "Tenancy - Public"
 PLATFORM_TENANCY_TAG = "Tenancy - Platform Admin"
 TENANT_TENANCY_TAG = "Tenancy - Tenant"
 
+__all__ = [
+    "PUBLIC_TENANCY_TAG",
+    "PLATFORM_TENANCY_TAG",
+    "TENANT_TENANCY_TAG",
+    "envelope_responses",
+    "public_post_schema",
+]
 
-def public_post_schema(*, request, responses, summary: str):
+
+def public_post_schema(
+    *,
+    request,
+    responses,
+    summary: str,
+    description: str,
+):
     """Document a public-schema POST endpoint with no auth requirement."""
 
     return extend_schema(
         tags=[PUBLIC_TENANCY_TAG],
         summary=summary,
+        description=description,
         request=request,
         responses=responses,
         auth=[],
     )
-
-
-def envelope_responses(*descriptions: tuple[int, str]) -> dict[int, OpenApiResponse]:
-    return {
-        status_code: OpenApiResponse(
-            description=description,
-        )
-        for status_code, description in descriptions
-    }

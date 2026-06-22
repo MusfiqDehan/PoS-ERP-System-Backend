@@ -14,10 +14,10 @@ REST_FRAMEWORK = {
 }
 
 INSTALLED_APPS = list(INSTALLED_APPS) + [  # noqa: F405
-    "shared.testapp.apps.SharedTestappConfig"
+    "shared.testapp.apps.SharedTestappConfig",
 ]
 TENANT_APPS = list(TENANT_APPS) + [  # noqa: F405
-    "shared.testapp.apps.SharedTestappConfig"
+    "shared.testapp.apps.SharedTestappConfig",
 ]
 
 CACHES = {

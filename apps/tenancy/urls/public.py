@@ -7,6 +7,7 @@ from apps.tenancy.views import (
     PasswordSetupView,
     TenantAdminListView,
     TenantAuthenticationView,
+    TenantFeatureOverrideView,
     TenantSelfRegistrationView,
     TokenRefreshView,
 )
@@ -34,4 +35,9 @@ urlpatterns = [
         name="tenant-password-reset-confirm",
     ),
     path("admin/tenants/", TenantAdminListView.as_view(), name="tenant-admin-list"),
+    path(
+        "admin/tenants/<uuid:tenant_id>/features/",
+        TenantFeatureOverrideView.as_view(),
+        name="tenant-feature-overrides",
+    ),
 ]

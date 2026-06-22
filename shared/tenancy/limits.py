@@ -1,49 +1,12 @@
 """Reusable helpers for enforcing tenant subscription limits.
 
-Limits live on the active tenant (``connection.tenant``). A limit value of
-``0`` (or ``None``) means *unlimited*.
+Limits are derived from active ``TenantProductSubscription`` rows via
+``apps.billing.services.limits_sync``. A limit value of ``0`` means unlimited.
 """
 
 from django.db import connection
 
-
-def _backfill_branch_limit_from_package(tenant, current_limit):
-    """Backfill stale tenant branch cap from active package when needed.
-
-    Older onboarding flows stored default caps (e.g. max_branches=1) even for
-    higher plans like Growth. This refreshes that one field on demand so limit
-    checks reflect the subscribed package.
-    """
-    if tenant is None:
-        return current_limit
-    if int(current_limit or 0) != 1:
-        return current_limit
-
-    plan_slug = str(getattr(tenant, "plan", "") or "").strip().lower()
-    if not plan_slug:
-        return current_limit
-
-    try:
-        from apps.tenancy.models import PlatformPackage
-
-        pkg = PlatformPackage.objects.filter(slug=plan_slug, is_active=True).first()
-    except Exception:
-        return current_limit
-
-    if pkg is None:
-        return current_limit
-
-    package_limit = int(getattr(pkg, "max_branches", 0) or 0)
-    if package_limit <= int(current_limit or 0):
-        return current_limit
-
-    tenant.max_branches = package_limit
-    try:
-        tenant.save(update_fields=["max_branches", "updated_at"])
-    except Exception:
-        # Read-path resiliency: do not fail capacity checks on backfill errors.
-        return current_limit
-    return package_limit
+from apps.billing.services.limits_sync import compute_effective_limits
 
 
 def get_tenant_limit(limit_attr):
@@ -52,10 +15,15 @@ def get_tenant_limit(limit_attr):
     if tenant is None:
         return 0
 
-    limit = getattr(tenant, limit_attr, 0) or 0
-    if limit_attr == "max_branches":
-        limit = _backfill_branch_limit_from_package(tenant, limit)
-    return limit
+    limits = compute_effective_limits(tenant)
+    attr_map = {
+        "max_branches": limits.max_branches,
+        "max_users": limits.max_users,
+        "max_custom_roles": limits.max_custom_roles,
+        "max_admins": limits.max_admins,
+        "max_staff": limits.max_staff,
+    }
+    return attr_map.get(limit_attr, getattr(tenant, limit_attr, 0) or 0)
 
 
 def _limit_exceeded_payload(*, detail, limit_type, limit, current):
@@ -112,6 +80,66 @@ def branch_capacity_exceeded(queryset, branch_id, limit_attr, *, limit_type=None
                 "plan for this branch. Please upgrade to add more."
             ),
             limit_type=limit_type or limit_attr,
+            limit=limit,
+            current=current,
+        )
+    return None
+
+
+def user_capacity_exceeded(*, limit_type="users"):
+    """Check tenant-wide active user count against max_users."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    return total_capacity_exceeded(
+        User.objects.filter(is_active=True), "max_users", limit_type=limit_type
+    )
+
+
+def custom_role_capacity_exceeded(*, limit_type="custom_roles"):
+    from apps.access.models import Role
+
+    limit = get_tenant_limit("max_custom_roles")
+    if not limit:
+        return None
+    current = Role.objects.filter(is_system=False).count()
+    if current >= limit:
+        return _limit_exceeded_payload(
+            detail="Custom role limit reached for your current plan.",
+            limit_type=limit_type,
+            limit=limit,
+            current=current,
+        )
+    return None
+
+
+def role_assignment_capacity_exceeded(role_slug: str):
+    from apps.access.models import UserRole
+
+    limits = compute_effective_limits(getattr(connection, "tenant", None))
+    if role_slug == "admin":
+        limit = limits.max_admins
+        current = UserRole.objects.filter(role__slug="admin").count()
+        limit_type = "admins"
+    elif role_slug in limits.per_role_limits:
+        limit = limits.per_role_limits[role_slug]
+        current = UserRole.objects.filter(role__slug=role_slug).count()
+        limit_type = f"role:{role_slug}"
+    elif role_slug in {"manager", "cashier", "branch_manager"}:
+        limit = limits.max_staff
+        current = UserRole.objects.filter(
+            role__slug__in={"manager", "cashier", "branch_manager"}
+        ).count()
+        limit_type = "staff"
+    else:
+        return None
+
+    if not limit:
+        return None
+    if current >= limit:
+        return _limit_exceeded_payload(
+            detail="Role assignment limit reached for your current plan.",
+            limit_type=limit_type,
             limit=limit,
             current=current,
         )

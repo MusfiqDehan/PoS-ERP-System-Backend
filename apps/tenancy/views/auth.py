@@ -18,13 +18,22 @@ from apps.tenancy.services import AuthService, PasswordService, TenantAuditServi
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
+from shared.services.asset_attachment import serialize_asset_summary
 
 
 @public_post_schema(
     request=TenantAuthSerializer,
     summary="Authenticate a tenant user",
+    description=(
+        "Authenticates a tenant user on the public schema using email, password, and "
+        "tenant domain or subdomain. Returns JWT access and refresh tokens plus tenant "
+        "metadata on success. Rate limited to 30 requests per minute."
+    ),
     responses=envelope_responses(
-        (status.HTTP_200_OK, "Login successful; returns JWT access and refresh tokens."),
+        (
+            status.HTTP_200_OK,
+            "Login successful; returns JWT access and refresh tokens.",
+        ),
         (status.HTTP_401_UNAUTHORIZED, "Invalid credentials."),
         (status.HTTP_403_FORBIDDEN, "Tenant access denied."),
     ),
@@ -67,16 +76,20 @@ class TenantAuthenticationView(APIView):
             target_id=tokens.user.id,
             metadata={"email": payload["email"], "domain": tokens.domain},
         )
+        tenant_payload = {
+            "id": str(tokens.tenant.id),
+            "name": tokens.tenant.name,
+            "schema_name": tokens.tenant.schema_name,
+            "domain": tokens.domain,
+        }
+        company_logo = serialize_asset_summary(tokens.tenant.get_company_logo_asset())
+        if company_logo is not None:
+            tenant_payload["company_logo"] = company_logo
         return success_response(
             data={
                 "access": tokens.access,
                 "refresh": tokens.refresh,
-                "tenant": {
-                    "id": str(tokens.tenant.id),
-                    "name": tokens.tenant.name,
-                    "schema_name": tokens.tenant.schema_name,
-                    "domain": tokens.domain,
-                },
+                "tenant": tenant_payload,
             },
             message="Login successful.",
         )
@@ -85,6 +98,10 @@ class TenantAuthenticationView(APIView):
 @public_post_schema(
     request=TokenRefreshSerializer,
     summary="Refresh JWT access token",
+    description=(
+        "Exchanges a valid refresh token for a new access token pair. No authentication "
+        "header is required; supply the refresh token in the request body."
+    ),
     responses=envelope_responses(
         (status.HTTP_200_OK, "Token refreshed."),
         (status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token."),
@@ -110,6 +127,10 @@ class TokenRefreshView(APIView):
 @extend_schema(
     tags=[TENANT_TENANCY_TAG],
     summary="Get current tenant user profile",
+    description=(
+        "Returns the authenticated user's profile within the resolved tenant schema. "
+        "Requires a valid JWT bearer token."
+    ),
     responses={
         status.HTTP_200_OK: OpenApiResponse(
             description="Authenticated user profile envelope."
@@ -129,6 +150,10 @@ class MeView(APIView):
 @extend_schema(
     tags=[TENANT_TENANCY_TAG],
     summary="Change password for the authenticated user",
+    description=(
+        "Changes the password for the currently authenticated tenant user. Requires the "
+        "current password and a validated new password."
+    ),
     request=ChangePasswordSerializer,
     responses=envelope_responses(
         (status.HTTP_200_OK, "Password changed successfully."),

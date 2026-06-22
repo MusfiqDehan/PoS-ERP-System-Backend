@@ -83,7 +83,9 @@ class ModelCRUDView(GenericAPIView):
         }
         return messages.get(action, "Operation successful.")
 
-    def get_list_meta(self, request: Request, queryset: QuerySet[Any]) -> dict[str, Any]:
+    def get_list_meta(
+        self, request: Request, queryset: QuerySet[Any]
+    ) -> dict[str, Any]:
         return {}
 
     def _list(self, request: Request) -> Response:

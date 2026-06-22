@@ -16,7 +16,11 @@ from shared.cache.helpers import (
 class PlatformPermissionService:
     @staticmethod
     def is_superadmin(user) -> bool:
-        return bool(user and user.is_authenticated and user.is_superuser)
+        if not (user and user.is_authenticated):
+            return False
+        return PlatformUserRole.objects.filter(
+            user=user, role__slug="superadmin"
+        ).exists()
 
     @staticmethod
     def _compute_permission_map(user) -> dict[str, str]:

@@ -35,6 +35,7 @@ PREDEFINED_TENANT_ROLES = {
             "customers": "edit",
             "reports": "view",
             "branches": "view",
+            "settings": "edit",
         },
     },
     "cashier": {

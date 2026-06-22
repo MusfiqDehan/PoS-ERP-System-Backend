@@ -46,13 +46,27 @@ class Tenant(UUIDPrimaryKeyMixin, TenantMixin):
         default=False,
         help_text="When True, this tenant may connect a custom domain from Settings.",
     )
-
+    landing_page_enabled = models.BooleanField(default=False)
     features = models.JSONField(default=dict, blank=True)
     owner_email = models.EmailField(null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        "tenancy.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_tenants",
+    )
+    updated_by = models.ForeignKey(
+        "tenancy.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_tenants",
+    )
 
     auto_create_schema = True
 
@@ -64,6 +78,19 @@ class Tenant(UUIDPrimaryKeyMixin, TenantMixin):
 
     def allows_user_entry(self) -> bool:
         return self.is_enabled and self.status in self.ENTRY_ALLOWED_STATUSES
+
+    def get_company_logo_asset(self):
+        from shared.services.asset_attachment import (
+            AssetAttachmentService,
+            TENANT_COMPANY_LOGO_FIELD,
+            TENANT_COMPANY_LOGO_ROLE,
+        )
+
+        return AssetAttachmentService.get_primary_asset(
+            parent=self,
+            role=TENANT_COMPANY_LOGO_ROLE,
+            field_name=TENANT_COMPANY_LOGO_FIELD,
+        )
 
 
 class Domain(UUIDPrimaryKeyMixin, DomainMixin):

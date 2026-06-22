@@ -73,9 +73,10 @@ def test_local_settings_define_internal_ips_and_silk_auth_disabled():
     assert "127.0.0.1" in local.INTERNAL_IPS
     assert local.SILKY_AUTHENTICATION is False
     assert local.SILKY_AUTHORISATION is False
-    assert "debug_toolbar.panels.profiling.ProfilingPanel" in local.DEBUG_TOOLBAR_CONFIG[
-        "DISABLE_PANELS"
-    ]
+    assert (
+        "debug_toolbar.panels.profiling.ProfilingPanel"
+        in local.DEBUG_TOOLBAR_CONFIG["DISABLE_PANELS"]
+    )
 
 
 def test_production_settings_exclude_dev_tooling():

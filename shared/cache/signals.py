@@ -16,18 +16,19 @@ from shared.cache.helpers import (
     invalidate_tenant_admin_notification_counts,
     invalidate_tenant_overview,
     invalidate_timezone,
+    invalidate_platform_user_permissions,
     invalidate_user_permissions,
 )
 
 
-@receiver(post_save, sender="tenancy.PlatformPackage")
-@receiver(post_delete, sender="tenancy.PlatformPackage")
+@receiver(post_save, sender="billing.Package")
+@receiver(post_delete, sender="billing.Package")
 def invalidate_public_packages_on_package_change(sender, **kwargs):
     invalidate_public_packages()
 
 
-@receiver(post_save, sender="tenancy.PlatformPackageFeature")
-@receiver(post_delete, sender="tenancy.PlatformPackageFeature")
+@receiver(post_save, sender="billing.PackageFeature")
+@receiver(post_delete, sender="billing.PackageFeature")
 def invalidate_public_packages_on_package_feature_change(sender, **kwargs):
     invalidate_public_packages()
 
@@ -82,8 +83,8 @@ def invalidate_tenant_overview_on_invitation_change(sender, **kwargs):
     invalidate_tenant_overview()
 
 
-@receiver(post_save, sender="gym_branch.Branch")
-@receiver(post_delete, sender="gym_branch.Branch")
+@receiver(post_save, sender="branch.Branch")
+@receiver(post_delete, sender="branch.Branch")
 def invalidate_public_branches_on_branch_change(sender, **kwargs):
     schema_name = connection.schema_name
     if schema_name and schema_name != "public":
@@ -120,11 +121,26 @@ def invalidate_notification_count_on_read(sender, instance, **kwargs):
         invalidate_notification_count(schema_name, instance.user_id)
 
 
-@receiver(post_save, sender="identity.User")
-def invalidate_user_permissions_on_identity_change(
+@receiver(post_save, sender="access.UserRole")
+@receiver(post_delete, sender="access.UserRole")
+def invalidate_user_permissions_on_user_role_change(sender, instance, **kwargs):
+    schema_name = connection.schema_name
+    if not schema_name or schema_name == "public":
+        return
+    invalidate_user_permissions(schema_name, instance.user_id)
+
+
+@receiver(post_save, sender="tenancy.PlatformUserRole")
+@receiver(post_delete, sender="tenancy.PlatformUserRole")
+def invalidate_platform_user_permissions_on_role_change(sender, instance, **kwargs):
+    invalidate_platform_user_permissions(instance.user_id)
+
+
+@receiver(post_save, sender="tenancy.User")
+def invalidate_user_permissions_on_user_active_change(
     sender, instance, update_fields=None, **kwargs
 ):
-    tracked = {"is_staff", "is_superuser", "role"}
+    tracked = {"is_active", "is_deleted"}
     if update_fields is not None and tracked.isdisjoint(update_fields):
         return
     schema_name = connection.schema_name
