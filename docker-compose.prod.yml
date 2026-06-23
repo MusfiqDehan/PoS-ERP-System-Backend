@@ -44,7 +44,7 @@ services:
       - "traefik.docker.network=traefik_proxy"
 
       # ── HTTPS API (rate limited) — platform hosts
-      - "traefik.http.routers.backend-api.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-api.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/api`) || PathPrefix(`/admin/`) || Path(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
       - "traefik.http.routers.backend-api.entrypoints=websecure"
       - "traefik.http.routers.backend-api.tls=true"
       - "traefik.http.routers.backend-api.tls.certresolver=letsencrypt"
@@ -73,7 +73,7 @@ services:
       - "traefik.http.routers.backend-adms.service=backend"
 
       # ── HTTPS API — tenant custom domains
-      - "traefik.http.routers.backend-custom-api.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-custom-api.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/api`) || PathPrefix(`/admin/`) || Path(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
       - "traefik.http.routers.backend-custom-api.entrypoints=websecure"
       - "traefik.http.routers.backend-custom-api.tls=true"
       - "traefik.http.routers.backend-custom-api.tls.certresolver=customdomains"
