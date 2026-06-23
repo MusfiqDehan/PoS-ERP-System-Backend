@@ -171,11 +171,13 @@ services:
     env_file: .env.pgbouncer.prod
     environment:
       LISTEN_PORT: "6432"
-      DEFAULT_POOL_SIZE: "50"
-      RESERVE_POOL_SIZE: "10"
-      MAX_DB_CONNECTIONS: "80"
-      SERVER_IDLE_TIMEOUT: "300"
-      CLIENT_IDLE_TIMEOUT: "300"
+      POOL_MODE: transaction
+      DEFAULT_POOL_SIZE: "25"
+      RESERVE_POOL_SIZE: "5"
+      MAX_DB_CONNECTIONS: "40"
+      SERVER_IDLE_TIMEOUT: "60"
+      CLIENT_IDLE_TIMEOUT: "60"
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
     depends_on:
       db:
         condition: service_healthy

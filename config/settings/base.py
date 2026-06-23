@@ -207,7 +207,8 @@ if _database_url:
     _db_cfg = dj_database_url.parse(
         _database_url,
         conn_max_age=DB_CONN_MAX_AGE,
-        conn_health_checks=True,
+        conn_health_checks=not os.environ.get("USE_PGBOUNCER", "").strip().lower()
+        in ("1", "true", "yes", "on"),
     )
     db_host = _db_cfg.get("HOST")
     if not is_running_in_docker() and db_host in {
@@ -240,6 +241,9 @@ if _database_url:
         if resolved_host:
             _db_cfg["HOST"] = resolved_host
     _db_cfg["ENGINE"] = "django_tenants.postgresql_backend"
+    if os.environ.get("USE_PGBOUNCER", "").strip().lower() in ("1", "true", "yes", "on"):
+        # Required for PgBouncer transaction pooling with Django.
+        _db_cfg["DISABLE_SERVER_SIDE_CURSORS"] = True
     DATABASES = {"default": _db_cfg}
 else:
     DATABASES = {
