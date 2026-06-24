@@ -30,8 +30,8 @@ def test_openapi_operations_have_descriptions():
         for method, path, operation in _api_operations(schema)
         if not str(operation.get("description", "")).strip()
     ]
-    assert not missing, (
-        "OpenAPI operations missing description:\n" + "\n".join(sorted(missing))
+    assert not missing, "OpenAPI operations missing description:\n" + "\n".join(
+        sorted(missing)
     )
 
 
@@ -48,11 +48,7 @@ def test_openapi_tags_have_descriptions():
         for entry in schema.get("tags", [])
         if entry.get("name")
     }
-    missing = sorted(
-        tag
-        for tag in used_tags
-        if not tag_descriptions.get(tag, "")
-    )
-    assert not missing, (
-        "OpenAPI tags missing description metadata:\n" + "\n".join(missing)
+    missing = sorted(tag for tag in used_tags if not tag_descriptions.get(tag, ""))
+    assert not missing, "OpenAPI tags missing description metadata:\n" + "\n".join(
+        missing
     )
