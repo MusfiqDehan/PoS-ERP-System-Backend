@@ -8,7 +8,6 @@ from django_tenants.utils import schema_context
 from rest_framework.test import APIClient
 
 from apps.access.models import Role, UserRole
-from apps.tenancy.models import User
 from apps.tenancy.serializers import TenantBrandingSerializer, UserProfileSerializer
 from apps.tenancy.serializers.tenant_user import TenantUserListSerializer
 from shared.services.asset_attachment import (
