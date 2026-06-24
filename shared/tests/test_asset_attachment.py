@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django_tenants.utils import get_public_schema_name, schema_context
 
-from apps.tenancy.models import Tenant, User
+from apps.tenancy.models import User
 from shared.models import AssetRelation, AssetRelationRole, AssetType
 from shared.services.asset_attachment import (
     AssetAttachmentError,
