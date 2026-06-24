@@ -10,7 +10,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sortorium-backend
-    image: sortorium-backend:latest
+    image: sortorium-backend:${IMAGE_TAG:-latest}
+    stop_grace_period: 30s
     env_file: .env.prod
     expose:
       - "8002"
@@ -106,7 +107,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sortorium-celery-worker
-    image: sortorium-backend:latest
+    image: sortorium-backend:${IMAGE_TAG:-latest}
     env_file: .env.prod
     depends_on:
       pgbouncer:
@@ -144,7 +145,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sortorium-celery-beat
-    image: sortorium-backend:latest
+    image: sortorium-backend:${IMAGE_TAG:-latest}
     env_file: .env.prod
     depends_on:
       pgbouncer:
