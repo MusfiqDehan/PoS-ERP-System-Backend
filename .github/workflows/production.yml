@@ -87,6 +87,8 @@ jobs:
           rsync -az --delete \
             --exclude '.git/' \
             --exclude '.venv/' \
+            --exclude '.venv*/' \
+            --exclude 'venv/' \
             --exclude '__pycache__/' \
             --exclude '.env.prod' \
             --exclude '.env.pgbouncer.prod' \
