@@ -33,9 +33,9 @@ jobs:
       DB_HOST: localhost
       DB_PORT: "5432"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.14"
           cache: pip
@@ -67,7 +67,9 @@ jobs:
       group: production-deploy
       cancel-in-progress: false
     steps:
-      - uses: webfactory/ssh-agent@v0.9.0
+      - uses: actions/checkout@v7.0.0
+
+      - uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
 
@@ -78,10 +80,21 @@ jobs:
           VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          ssh -o StrictHostKeyChecking=accept-new "${VPS_USER}@${VPS_HOST}" \
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new"
+          RSYNC_RSH="ssh ${SSH_OPTS}"
+
+          # Push checkout to VPS over SSH (VPS cannot git-fetch private HTTPS remotes).
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.venv/' \
+            --exclude '__pycache__/' \
+            --exclude '.env.prod' \
+            --exclude '.env.pgbouncer.prod' \
+            -e "${RSYNC_RSH}" \
+            ./ "${VPS_USER}@${VPS_HOST}:${VPS_DEPLOY_PATH}/"
+
+          ssh ${SSH_OPTS} "${VPS_USER}@${VPS_HOST}" \
             "set -euo pipefail
              cd '${VPS_DEPLOY_PATH}'
-             git fetch origin '${IMAGE_TAG}'
-             git reset --hard '${IMAGE_TAG}'
              chmod +x scripts/deploy/production.sh
              IMAGE_TAG='${IMAGE_TAG}' ./scripts/deploy/production.sh"

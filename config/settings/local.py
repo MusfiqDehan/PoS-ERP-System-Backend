@@ -17,7 +17,9 @@ INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS  # noqa: F405
 ]
 INSTALLED_APPS += ["shared.testapp.apps.SharedTestappConfig"]
-TENANT_APPS = list(TENANT_APPS) + ["shared.testapp.apps.SharedTestappConfig"]  # noqa: F405
+TENANT_APPS = list(TENANT_APPS) + [  # noqa: F405
+    "shared.testapp.apps.SharedTestappConfig"
+]
 
 MIDDLEWARE = [
     "apps.tenancy.middleware.MobileAwareTenantMainMiddleware",

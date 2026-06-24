@@ -1,5 +1,7 @@
 """Pytest configuration for Sortorium Backend."""
 
+from pathlib import Path
+
 import pytest
 from django.contrib.auth import get_user_model
 from django_tenants.utils import get_public_schema_name, schema_context
@@ -7,6 +9,13 @@ from django_tenants.utils import get_public_schema_name, schema_context
 from apps.tenancy.models import Domain, Tenant
 
 User = get_user_model()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_static_root_exists():
+    from django.conf import settings
+
+    Path(settings.STATIC_ROOT).mkdir(parents=True, exist_ok=True)
 
 
 @pytest.fixture(scope="session")

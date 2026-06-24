@@ -5,7 +5,11 @@ from rest_framework import status
 from rest_framework.views import APIView
 
 from apps.billing.models import Package, PackageFeature, SoftwareProduct
-from apps.billing.openapi import PLATFORM_BILLING_TAG, document_crud_view, envelope_responses
+from apps.billing.openapi import (
+    PLATFORM_BILLING_TAG,
+    document_crud_view,
+    envelope_responses,
+)
 from apps.billing.serializers import PackageFeatureBulkSerializer, PackageSerializer
 from apps.billing.serializers.product import SoftwareProductSerializer
 from apps.tenancy.permissions import IsPlatformFeaturePermission

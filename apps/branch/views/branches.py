@@ -249,7 +249,9 @@ class BranchSummaryView(APIView):
     },
     responses={
         status.HTTP_200_OK: OpenApiResponse(description="Updated branch envelope."),
-        status.HTTP_404_NOT_FOUND: OpenApiResponse(description="Branch or user not found."),
+        status.HTTP_404_NOT_FOUND: OpenApiResponse(
+            description="Branch or user not found."
+        ),
     },
 )
 class BranchManagerAssignView(APIView):

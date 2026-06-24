@@ -8,7 +8,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.access.models import Role, RolePermission, UserRole
-from apps.access.openapi import TENANT_ACCESS_TAG, document_crud_view, envelope_responses
+from apps.access.openapi import (
+    TENANT_ACCESS_TAG,
+    document_crud_view,
+    envelope_responses,
+)
 from apps.access.permissions import IsRoleAdmin
 from apps.access.serializers import (
     RolePermissionsBulkSerializer,

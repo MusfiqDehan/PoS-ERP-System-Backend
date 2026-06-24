@@ -8,7 +8,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.billing.models import TenantProductSubscription, TenantSubscriptionInvoice
-from apps.billing.openapi import PUBLIC_BILLING_TAG, TENANT_BILLING_TAG, envelope_responses
+from apps.billing.openapi import (
+    PUBLIC_BILLING_TAG,
+    TENANT_BILLING_TAG,
+    envelope_responses,
+)
 from apps.billing.serializers.subscription import (
     InitiateSubscriptionChangeSerializer,
     TenantProductSubscriptionSerializer,
@@ -32,7 +36,9 @@ from shared.tenancy.helpers import is_tenant_admin_user
         "current tenant. Only tenant administrators can access this endpoint."
     ),
     responses={
-        status.HTTP_200_OK: OpenApiResponse(description="Subscription summary envelope.")
+        status.HTTP_200_OK: OpenApiResponse(
+            description="Subscription summary envelope."
+        )
     },
 )
 class SubscriptionSummaryView(APIView):
