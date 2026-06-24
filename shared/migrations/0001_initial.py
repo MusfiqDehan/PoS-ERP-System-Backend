@@ -12,80 +12,235 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('contenttypes', '0002_remove_content_type_name'),
+        ("contenttypes", "0002_remove_content_type_name"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Asset',
+            name="Asset",
             fields=[
-                ('id', models.UUIDField(default=shared.models.base.generate_uuid7, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('is_active', models.BooleanField(default=True, help_text='Whether this item is active and usable')),
-                ('is_published', models.BooleanField(default=False, help_text='Whether this item is published/visible')),
-                ('is_deleted', models.BooleanField(default=False)),
-                ('deleted_at', models.DateTimeField(blank=True, null=True)),
-                ('file', models.FileField(max_length=500, upload_to=shared.models.media_upload.asset_upload_to)),
-                ('original_filename', models.CharField(max_length=255)),
-                ('mime_type', models.CharField(max_length=127)),
-                ('file_size', models.PositiveBigIntegerField()),
-                ('asset_type', models.CharField(choices=[('image', 'Image'), ('pdf', 'PDF'), ('video', 'Video'), ('audio', 'Audio'), ('html', 'HTML'), ('document', 'Document'), ('other', 'Other')], max_length=20)),
-                ('checksum', models.CharField(blank=True, default='', max_length=64)),
-                ('title', models.CharField(blank=True, default='', max_length=255)),
-                ('alt_text', models.CharField(blank=True, default='', max_length=255)),
-                ('description', models.TextField(blank=True, default='')),
-                ('width', models.PositiveIntegerField(blank=True, null=True)),
-                ('height', models.PositiveIntegerField(blank=True, null=True)),
-                ('duration_seconds', models.DecimalField(blank=True, decimal_places=3, max_digits=12, null=True)),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_created_records', to=settings.AUTH_USER_MODEL)),
-                ('deleted_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_deleted_records', to=settings.AUTH_USER_MODEL)),
-                ('updated_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_updated_records', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=shared.models.base.generate_uuid7,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True, help_text="Whether this item is active and usable"
+                    ),
+                ),
+                (
+                    "is_published",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Whether this item is published/visible",
+                    ),
+                ),
+                ("is_deleted", models.BooleanField(default=False)),
+                ("deleted_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "file",
+                    models.FileField(
+                        max_length=500,
+                        upload_to=shared.models.media_upload.asset_upload_to,
+                    ),
+                ),
+                ("original_filename", models.CharField(max_length=255)),
+                ("mime_type", models.CharField(max_length=127)),
+                ("file_size", models.PositiveBigIntegerField()),
+                (
+                    "asset_type",
+                    models.CharField(
+                        choices=[
+                            ("image", "Image"),
+                            ("pdf", "PDF"),
+                            ("video", "Video"),
+                            ("audio", "Audio"),
+                            ("html", "HTML"),
+                            ("document", "Document"),
+                            ("other", "Other"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("checksum", models.CharField(blank=True, default="", max_length=64)),
+                ("title", models.CharField(blank=True, default="", max_length=255)),
+                ("alt_text", models.CharField(blank=True, default="", max_length=255)),
+                ("description", models.TextField(blank=True, default="")),
+                ("width", models.PositiveIntegerField(blank=True, null=True)),
+                ("height", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "duration_seconds",
+                    models.DecimalField(
+                        blank=True, decimal_places=3, max_digits=12, null=True
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_created_records",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "deleted_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_deleted_records",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_updated_records",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'shared_asset',
+                "db_table": "shared_asset",
             },
         ),
         migrations.CreateModel(
-            name='AssetRelation',
+            name="AssetRelation",
             fields=[
-                ('id', models.UUIDField(default=shared.models.base.generate_uuid7, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('is_active', models.BooleanField(default=True, help_text='Whether this item is active and usable')),
-                ('is_published', models.BooleanField(default=False, help_text='Whether this item is published/visible')),
-                ('is_deleted', models.BooleanField(default=False)),
-                ('deleted_at', models.DateTimeField(blank=True, null=True)),
-                ('object_id', models.UUIDField()),
-                ('role', models.CharField(choices=[('primary_image', 'Primary Image'), ('gallery', 'Gallery'), ('attachment', 'Attachment'), ('avatar', 'Avatar'), ('thumbnail', 'Thumbnail'), ('cover', 'Cover'), ('document', 'Document'), ('other', 'Other')], max_length=32)),
-                ('field_name', models.CharField(blank=True, default='', max_length=64)),
-                ('sort_order', models.PositiveIntegerField(default=0)),
-                ('is_primary', models.BooleanField(default=False)),
-                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='relations', to='shared.asset')),
-                ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.contenttype')),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_created_records', to=settings.AUTH_USER_MODEL)),
-                ('deleted_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_deleted_records', to=settings.AUTH_USER_MODEL)),
-                ('updated_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_updated_records', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=shared.models.base.generate_uuid7,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True, help_text="Whether this item is active and usable"
+                    ),
+                ),
+                (
+                    "is_published",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Whether this item is published/visible",
+                    ),
+                ),
+                ("is_deleted", models.BooleanField(default=False)),
+                ("deleted_at", models.DateTimeField(blank=True, null=True)),
+                ("object_id", models.UUIDField()),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[
+                            ("primary_image", "Primary Image"),
+                            ("gallery", "Gallery"),
+                            ("attachment", "Attachment"),
+                            ("avatar", "Avatar"),
+                            ("thumbnail", "Thumbnail"),
+                            ("cover", "Cover"),
+                            ("document", "Document"),
+                            ("other", "Other"),
+                        ],
+                        max_length=32,
+                    ),
+                ),
+                ("field_name", models.CharField(blank=True, default="", max_length=64)),
+                ("sort_order", models.PositiveIntegerField(default=0)),
+                ("is_primary", models.BooleanField(default=False)),
+                (
+                    "asset",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="relations",
+                        to="shared.asset",
+                    ),
+                ),
+                (
+                    "content_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="contenttypes.contenttype",
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_created_records",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "deleted_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_deleted_records",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="%(app_label)s_%(class)s_updated_records",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'shared_asset_relation',
+                "db_table": "shared_asset_relation",
             },
         ),
         migrations.AddIndex(
-            model_name='asset',
-            index=models.Index(fields=['asset_type'], name='shared_asse_asset_t_d71b8b_idx'),
+            model_name="asset",
+            index=models.Index(
+                fields=["asset_type"], name="shared_asse_asset_t_d71b8b_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='asset',
-            index=models.Index(fields=['mime_type'], name='shared_asse_mime_ty_94a318_idx'),
+            model_name="asset",
+            index=models.Index(
+                fields=["mime_type"], name="shared_asse_mime_ty_94a318_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='assetrelation',
-            index=models.Index(fields=['content_type', 'object_id', 'field_name', 'role'], name='shared_ar_parent_slot_idx'),
+            model_name="assetrelation",
+            index=models.Index(
+                fields=["content_type", "object_id", "field_name", "role"],
+                name="shared_ar_parent_slot_idx",
+            ),
         ),
         migrations.AddIndex(
-            model_name='assetrelation',
-            index=models.Index(fields=['content_type', 'object_id', 'sort_order'], name='shared_ar_parent_order_idx'),
+            model_name="assetrelation",
+            index=models.Index(
+                fields=["content_type", "object_id", "sort_order"],
+                name="shared_ar_parent_order_idx",
+            ),
         ),
     ]
