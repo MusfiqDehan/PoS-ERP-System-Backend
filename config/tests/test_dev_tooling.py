@@ -114,7 +114,11 @@ def test_debug_toolbar_url_pattern_registered_when_debug_enabled():
     assert match.namespace == "djdt"
 
 
-@override_settings(DEBUG=True, ROOT_URLCONF="config.urls")
+@override_settings(
+    DEBUG=True,
+    ROOT_URLCONF="config.urls",
+    INSTALLED_APPS=importlib.import_module("config.settings.local").INSTALLED_APPS,
+)
 def test_debug_toolbar_url_pattern_registered_on_tenant_urlconf():
     import config.urls as tenant_urls
 
