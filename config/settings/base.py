@@ -207,8 +207,8 @@ if _database_url:
     _db_cfg = dj_database_url.parse(
         _database_url,
         conn_max_age=DB_CONN_MAX_AGE,
-        conn_health_checks=not os.environ.get("USE_PGBOUNCER", "").strip().lower()
-        in ("1", "true", "yes", "on"),
+        conn_health_checks=os.environ.get("USE_PGBOUNCER", "").strip().lower()
+        not in ("1", "true", "yes", "on"),
     )
     db_host = _db_cfg.get("HOST")
     if not is_running_in_docker() and db_host in {
