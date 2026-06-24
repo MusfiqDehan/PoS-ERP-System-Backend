@@ -241,7 +241,12 @@ if _database_url:
         if resolved_host:
             _db_cfg["HOST"] = resolved_host
     _db_cfg["ENGINE"] = "django_tenants.postgresql_backend"
-    if os.environ.get("USE_PGBOUNCER", "").strip().lower() in ("1", "true", "yes", "on"):
+    if os.environ.get("USE_PGBOUNCER", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
         # Required for PgBouncer transaction pooling with Django.
         _db_cfg["DISABLE_SERVER_SIDE_CURSORS"] = True
     DATABASES = {"default": _db_cfg}
