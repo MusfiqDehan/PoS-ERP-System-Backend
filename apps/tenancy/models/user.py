@@ -83,6 +83,9 @@ class User(BaseModel):
     def set_password(self, raw_password):
         self.password = make_password(raw_password)
 
+    def set_unusable_password(self):
+        self.password = make_password(None)
+
     def check_password(self, raw_password):
         return auth_check_password(raw_password, self.password)
 
