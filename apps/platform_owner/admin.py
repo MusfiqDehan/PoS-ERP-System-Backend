@@ -1,3 +1,1 @@
-from django.contrib import admin
-
-# Register your models here.
+# Platform owner uses tenancy models; no local admin registrations.
