@@ -22,7 +22,7 @@ Interactive documentation is served at `/api/v1/docs/` (Swagger UI) and `/api/v1
 
 ### Totals
 
-- **88** documented API operations across **10** tag groups
+- **84** documented API operations across **9** tag groups
 - **15** public (unauthenticated) operations
 - **73** JWT-authenticated operations
 
@@ -210,43 +210,6 @@ Lists active tenant users visible to the caller based on branch access rules. Su
 
 ---
 
-## Tenancy - Platform Admin
-
-Platform administrator operations for tenant lifecycle and feature overrides.
-
-| Method | Endpoint | Summary | Auth | Schema |
-|--------|----------|---------|------|--------|
-| `GET` | `/api/v1/tenancy/admin/tenants/` | List tenants (platform admin) | JWT Bearer | public |
-| `GET` | `/api/v1/tenancy/admin/tenants/{tenant_id}/features/` | Read tenant feature overrides (platform admin) | JWT Bearer | public |
-| `PATCH` | `/api/v1/tenancy/admin/tenants/{tenant_id}/features/` | Update tenant feature overrides (platform admin) | JWT Bearer | public |
-
-<details>
-<summary>Endpoint details (3 operations)</summary>
-
-### `GET` `/api/v1/tenancy/admin/tenants/`
-
-**List tenants (platform admin)**
-
-Returns a cursor-paginated list of tenants for platform administrators. Requires platform.tenants view permission.
-
-### `GET` `/api/v1/tenancy/admin/tenants/{tenant_id}/features/`
-
-**Read tenant feature overrides (platform admin)**
-
-Returns per-tenant feature override map for a platform administrator. Requires platform.tenants edit permission.
-
-### `PATCH` `/api/v1/tenancy/admin/tenants/{tenant_id}/features/`
-
-**Update tenant feature overrides (platform admin)**
-
-Patches per-tenant feature overrides for a platform administrator. Requires a features object in the request body and platform.tenants edit permission.
-
-</details>
-
-> **Deprecation note:** Prefer `/api/v1/platform-owner/tenants/` and `/api/v1/platform-owner/tenants/{tenant_id}/features/` for new platform console clients. Legacy `/api/v1/tenancy/admin/*` routes remain during the deprecation window.
-
----
-
 ## Platform Owner
 
 Invite-only platform operator console APIs on the public schema. **No self-registration** — team members are onboarded via invitation acceptance or `create_superadmin` bootstrap.
@@ -277,7 +240,6 @@ Invite-only platform operator console APIs on the public schema. **No self-regis
 | `GET` | `/api/v1/platform-owner/tenants/` | List tenants | JWT Bearer | public |
 | `GET` | `/api/v1/platform-owner/tenants/{tenant_id}/features/` | Read tenant feature overrides | JWT Bearer | public |
 | `PATCH` | `/api/v1/platform-owner/tenants/{tenant_id}/features/` | Patch tenant feature overrides | JWT Bearer | public |
-| `GET` | `/api/v1/tenancy/admin/me/platform-permissions/` | Legacy permissions alias | JWT Bearer | public |
 
 ---
 
