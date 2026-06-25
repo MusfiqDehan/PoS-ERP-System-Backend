@@ -17,6 +17,8 @@ if [ "${SKIP_DB_BOOTSTRAP:-0}" = "1" ]; then
         python manage.py migrate_schemas --shared --noinput
         echo "Running tenant schema migrations..."
         python manage.py migrate_schemas --noinput
+        echo "Repairing public shared asset schema if needed..."
+        python manage.py repair_public_asset_schema
     else
         echo "Skipping DB bootstrap/migrations (SKIP_DB_BOOTSTRAP=1)."
     fi
@@ -33,6 +35,9 @@ python manage.py migrate_schemas --shared --noinput
 
 echo "Running tenant schema migrations..."
 python manage.py migrate_schemas --noinput
+
+echo "Repairing public shared asset schema if needed..."
+python manage.py repair_public_asset_schema
 
 echo "Syncing feature registry..."
 python manage.py sync_features || true
