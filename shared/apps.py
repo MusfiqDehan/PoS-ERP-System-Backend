@@ -5,3 +5,6 @@ class SharedConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "shared"
     label = "shared"
+
+    def ready(self) -> None:
+        import shared.cache.signals  # noqa: F401
