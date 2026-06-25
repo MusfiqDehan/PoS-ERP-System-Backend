@@ -243,6 +243,42 @@ Patches per-tenant feature overrides for a platform administrator. Requires a fe
 
 </details>
 
+> **Deprecation note:** Prefer `/api/v1/platform-owner/tenants/` and `/api/v1/platform-owner/tenants/{tenant_id}/features/` for new platform console clients. Legacy `/api/v1/tenancy/admin/*` routes remain during the deprecation window.
+
+---
+
+## Platform Owner
+
+Invite-only platform operator console APIs on the public schema. **No self-registration** — team members are onboarded via invitation acceptance or `create_superadmin` bootstrap.
+
+| Method | Endpoint | Summary | Auth | Schema |
+|--------|----------|---------|------|--------|
+| `POST` | `/api/v1/platform-owner/auth/login/` | Platform owner login | Public | public |
+| `POST` | `/api/v1/platform-owner/auth/refresh/` | Refresh platform JWT | Public | public |
+| `GET` | `/api/v1/platform-owner/me/` | Current platform user profile | JWT Bearer | public |
+| `GET` | `/api/v1/platform-owner/me/permissions/` | Effective platform permissions | JWT Bearer | public |
+| `POST` | `/api/v1/platform-owner/password/change/` | Change password | JWT Bearer | public |
+| `POST` | `/api/v1/platform-owner/password/reset/request/` | Request password reset | Public | public |
+| `POST` | `/api/v1/platform-owner/password/reset/confirm/` | Confirm password reset | Public | public |
+| `GET` | `/api/v1/platform-owner/invitations/` | List platform invitations | JWT Bearer | public |
+| `POST` | `/api/v1/platform-owner/invitations/` | Invite platform team member | JWT Bearer | public |
+| `POST` | `/api/v1/platform-owner/invitations/validate/` | Validate invitation token | Public | public |
+| `POST` | `/api/v1/platform-owner/invitations/accept/` | Accept invitation (onboarding) | Public | public |
+| `DELETE` | `/api/v1/platform-owner/invitations/{id}/` | Revoke invitation | JWT Bearer | public |
+| `GET` | `/api/v1/platform-owner/users/` | List platform users | JWT Bearer | public |
+| `GET` | `/api/v1/platform-owner/users/{user_id}/` | Platform user detail | JWT Bearer | public |
+| `PATCH` | `/api/v1/platform-owner/users/{user_id}/roles/` | Replace role assignments | JWT Bearer | public |
+| `POST` | `/api/v1/platform-owner/users/{user_id}/deactivate/` | Deactivate platform user | JWT Bearer | public |
+| `GET` | `/api/v1/platform-owner/settings/` | Read platform settings | JWT Bearer | public |
+| `PATCH` | `/api/v1/platform-owner/settings/` | Update platform settings | JWT Bearer | public |
+| `GET` | `/api/v1/platform-owner/features/` | List feature registry | JWT Bearer | public |
+| `POST` | `/api/v1/platform-owner/features/` | Create feature definition | JWT Bearer | public |
+| `PATCH` | `/api/v1/platform-owner/features/{key}/` | Update feature definition | JWT Bearer | public |
+| `GET` | `/api/v1/platform-owner/tenants/` | List tenants | JWT Bearer | public |
+| `GET` | `/api/v1/platform-owner/tenants/{tenant_id}/features/` | Read tenant feature overrides | JWT Bearer | public |
+| `PATCH` | `/api/v1/platform-owner/tenants/{tenant_id}/features/` | Patch tenant feature overrides | JWT Bearer | public |
+| `GET` | `/api/v1/tenancy/admin/me/platform-permissions/` | Legacy permissions alias | JWT Bearer | public |
+
 ---
 
 ## Access - Tenant
