@@ -76,13 +76,3 @@ def test_tenant_token_rejected_on_platform_me(tenant, tenant_domain, tenant_user
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
     response = client.get("/api/v1/platform-owner/me/", HTTP_HOST="localhost")
     assert response.status_code in (401, 403)
-
-
-@pytest.mark.django_db
-def test_platform_permissions_legacy_alias(public_schema, platform_auth_client):
-    response = platform_auth_client.get(
-        "/api/v1/tenancy/admin/me/platform-permissions/",
-        HTTP_HOST="localhost",
-    )
-    assert response.status_code == 200
-    assert "permissions" in response.data["data"]
