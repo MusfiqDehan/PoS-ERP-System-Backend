@@ -1,11 +1,13 @@
 """Reusable DRF view classes and mixins."""
 
 from shared.views.crud import ModelCRUDView
+from shared.views.public import PublicAPIView
 
 __all__ = [
     "BranchScopedListMixin",
     "BranchScopedQuerysetMixin",
     "ModelCRUDView",
+    "PublicAPIView",
     "SearchFilterSortPaginationMixin",
 ]
 
