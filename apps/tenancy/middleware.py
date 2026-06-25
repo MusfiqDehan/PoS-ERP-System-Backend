@@ -22,7 +22,6 @@ _PUBLIC_SCHEMA_PATH_PREFIXES = (
     "/api/v1/tenancy/password/setup/",
     "/api/v1/tenancy/password/reset/",
     "/api/v1/tenancy/auth/",
-    "/api/v1/tenancy/admin/",
     "/api/v1/billing/subscription/success/",
     "/api/v1/billing/subscription/fail/",
     "/api/v1/billing/subscription/cancel/",
