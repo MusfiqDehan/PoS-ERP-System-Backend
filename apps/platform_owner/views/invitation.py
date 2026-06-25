@@ -3,7 +3,6 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
-from rest_framework.views import APIView
 
 from apps.platform_owner.openapi import PLATFORM_OWNER_TAG, envelope_responses, public_post_schema
 from apps.platform_owner.serializers import (
