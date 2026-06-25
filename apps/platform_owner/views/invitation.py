@@ -1,6 +1,5 @@
 from django_tenants.utils import get_public_schema_name, schema_context
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -19,6 +18,7 @@ from shared.openapi import document_crud_view
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
 from shared.views import ModelCRUDView
+from shared.views.public import PublicAPIView
 
 
 @document_crud_view(
@@ -151,8 +151,7 @@ class PlatformInvitationRevokeView(ModelCRUDView):
         (status.HTTP_400_BAD_REQUEST, "Invalid or expired token."),
     ),
 )
-class PlatformInvitationValidateView(APIView):
-    permission_classes = [AllowAny]
+class PlatformInvitationValidateView(PublicAPIView):
 
     def post(self, request):
         serializer = PlatformInvitationTokenSerializer(data=request.data)
@@ -184,8 +183,7 @@ class PlatformInvitationValidateView(APIView):
         (status.HTTP_400_BAD_REQUEST, "Invalid token or password validation error."),
     ),
 )
-class PlatformInvitationAcceptView(APIView):
-    permission_classes = [AllowAny]
+class PlatformInvitationAcceptView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "platform_password_setup"
 
