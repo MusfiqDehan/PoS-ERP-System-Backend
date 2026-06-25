@@ -21,6 +21,20 @@ def test_no_register_route(public_schema):
 
 
 @pytest.mark.django_db
+def test_platform_login_ignores_empty_bearer_header(public_schema, platform_superadmin):
+    client = APIClient()
+    response = client.post(
+        "/api/v1/platform-owner/auth/login/",
+        {"email": "platform@test.com", "password": "TestPass1!"},
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_AUTHORIZATION="Bearer ",
+    )
+    assert response.status_code == 200
+    assert response.data["data"]["access"]
+
+
+@pytest.mark.django_db
 def test_platform_login_me_flow(public_schema, platform_superadmin):
     client = APIClient()
     login = client.post(
