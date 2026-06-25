@@ -43,6 +43,7 @@ ALLOWED_HOSTS = [
 SHARED_APPS = [
     "django_tenants",
     "apps.tenancy.apps.TenancyConfig",
+    "apps.platform_owner.apps.PlatformOwnerConfig",
     "apps.billing.apps.BillingConfig",
     "shared.apps.SharedConfig",
     "django.contrib.contenttypes",
@@ -103,10 +104,10 @@ if not _cors_allow_all:
     ]
     if DEBUG and not CORS_ALLOWED_ORIGINS:
         CORS_ALLOWED_ORIGINS = [
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:5174",
+            "http://localhost:3000",
+            "http://localhost:3002",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3002",
         ]
 
 CORS_ALLOW_CREDENTIALS = os.environ.get("CORS_ALLOW_CREDENTIALS", "true").lower() in (
@@ -346,6 +347,9 @@ REST_FRAMEWORK = {
         "tenant_password_reset": "10/hour",
         "tenant_password_setup": "20/hour",
         "superadmin_invitation": "60/hour",
+        "platform_auth": "30/minute",
+        "platform_password_reset": "10/hour",
+        "platform_password_setup": "20/hour",
     },
     "EXCEPTION_HANDLER": "shared.responses.handler.custom_exception_handler",
     "DEFAULT_FILTER_BACKENDS": [
@@ -417,6 +421,14 @@ SPECTACULAR_SETTINGS = {
         {
             "name": "Branch - Tenant",
             "description": "Authenticated tenant branch management, summaries, and manager assignment.",
+        },
+        {
+            "name": "Platform Owner",
+            "description": (
+                "Platform operator console APIs on the public schema. Invite-only team "
+                "access — no self-registration. Authentication, invitations, user "
+                "management, global settings, feature registry, and tenant administration."
+            ),
         },
     ],
     "POSTPROCESSING_HOOKS": [
