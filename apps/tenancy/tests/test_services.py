@@ -126,6 +126,57 @@ def test_password_service_rejects_invalid_token(public_schema):
 
 
 @pytest.mark.django_db
+def test_password_service_owner_setup_creates_tenant_user(public_schema):
+    from django.contrib.auth import get_user_model
+
+    from apps.tenancy.models import Tenant
+
+    User = get_user_model()
+    raw, invitation = Invitation.issue_token(
+        token_type=Invitation.TOKEN_TYPE_VERIFICATION,
+        email="owner@newshop.com",
+        subdomain="newshop",
+        company_name="New Shop",
+        metadata={"domain": "newshop.localhost", "plan": "free"},
+    )
+    result = PasswordService.setup_password(raw_token=raw, password="NewPass1!")
+    tenant = Tenant.objects.get(schema_name="newshop")
+    assert result["tenant_schema"] == "newshop"
+    invitation.refresh_from_db()
+    assert invitation.used_at is not None
+    assert invitation.tenant_id == tenant.id
+    with schema_context(tenant.schema_name):
+        user = User.objects.get(email="owner@newshop.com")
+        assert user.tenant_id is None
+        assert user.email_verified is True
+        assert user.check_password("NewPass1!")
+
+
+@pytest.mark.django_db
+def test_password_service_invitation_setup_for_existing_tenant(tenant, tenant_domain):
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    raw, invitation = Invitation.issue_token(
+        token_type=Invitation.TOKEN_TYPE_INVITATION,
+        email="invite@example.com",
+        subdomain="test-tenant",
+        company_name="Test Tenant",
+        tenant=tenant,
+        invitee_full_name="Invited User",
+        metadata={"domain": "test-tenant.localhost"},
+    )
+    TenantRegistrationService.bootstrap_tenant_schema(tenant)
+    result = PasswordService.setup_password(raw_token=raw, password="NewPass1!")
+    assert result["tenant_schema"] == tenant.schema_name
+    with schema_context(tenant.schema_name):
+        user = User.objects.get(email="invite@example.com")
+        assert user.tenant_id is None
+        assert user.full_name == "Invited User"
+        assert user.check_password("NewPass1!")
+
+
+@pytest.mark.django_db
 def test_process_email_queue_command(public_schema):
     EmailQueue.objects.create(
         to_email="recipient@example.com",
