@@ -27,7 +27,7 @@ PAYLOAD_PATH = REPO_ROOT / ".tmp-postman-collection-payload.json"
 OPENAPI_PATH = REPO_ROOT / ".tmp-sortorium-openapi.yaml"
 
 WORKSPACE_ID = "60de6d65-7979-42ab-a624-b0aa01c3b03c"
-COLLECTION_ID = "28790264-439b5057-e390-49fa-b730-9b81a6e40a6c"
+COLLECTION_ID = "28790264-575669e6-fbc3-41d1-9577-e89c9fbb5af1"
 SPEC_NAME = "sortorium-pos-api"
 
 JSON_OPTS = {"raw": {"language": "json"}}
@@ -513,51 +513,142 @@ def postman_request(
         return json.loads(resp.read().decode())
 
 
+def _item_to_postman_request(item: dict[str, Any], folder_id: str) -> dict[str, Any]:
+    request = item["request"]
+    body: dict[str, Any] = {
+        "name": item["name"],
+        "folder": folder_id,
+        "method": request["method"],
+        "url": request["url"]["raw"],
+        "description": request.get("description", ""),
+    }
+    headers = request.get("header") or []
+    if headers:
+        body["headerData"] = [
+            {"key": header["key"], "value": header["value"]} for header in headers
+        ]
+    request_body = request.get("body")
+    if request_body and request_body.get("mode") == "raw":
+        body["dataMode"] = "raw"
+        body["rawModeData"] = request_body.get("raw", "")
+        language = request_body.get("options", {}).get("raw", {}).get("language")
+        if language:
+            body["dataOptions"] = {"raw": {"language": language}}
+    auth = request.get("auth")
+    if auth and auth.get("type") == "bearer":
+        token = next(
+            (
+                entry["value"]
+                for entry in auth.get("bearer", [])
+                if entry.get("key") == "token"
+            ),
+            "",
+        )
+        body["auth"] = {
+            "type": "bearer",
+            "bearer": [{"key": "token", "value": token, "type": "string"}],
+        }
+    if item.get("event"):
+        body["events"] = item["event"]
+    return body
+
+
+def _find_or_create_platform_folder(remote_collection: dict[str, Any]) -> str:
+    for folder in remote_collection.get("item", []):
+        if folder.get("name") == "12 - Platform Owner":
+            return folder["id"]
+    created = postman_request(
+        "POST",
+        f"https://api.getpostman.com/collections/{COLLECTION_ID}/folders",
+        {
+            "name": "12 - Platform Owner",
+            "description": (
+                "Platform owner console APIs — invite-only onboarding, JWT auth with "
+                "platform_user claim, settings, feature registry, and tenant "
+                "administration. Run login first to set platformAccessToken."
+            ),
+        },
+    )
+    return created["data"]["id"]
+
+
+def _sync_environment_variables() -> None:
+    envs = postman_request(
+        "GET",
+        f"https://api.getpostman.com/environments?workspace={WORKSPACE_ID}",
+    )
+    target = next(
+        (
+            env
+            for env in envs.get("environments", [])
+            if env.get("name") == "Sortorium - Local"
+        ),
+        None,
+    )
+    if target is None:
+        print("Environment 'Sortorium - Local' not found; skipping env variable sync.")
+        return
+
+    env_id = target["uid"]
+    remote_env = postman_request(
+        "GET",
+        f"https://api.getpostman.com/environments/{env_id}",
+    )["environment"]
+    keys = {value["key"] for value in remote_env.get("values", [])}
+    for key in ("platformAccessToken", "platformRefreshToken"):
+        if key not in keys:
+            remote_env["values"].append({"key": key, "value": "", "enabled": True})
+    postman_request(
+        "PUT",
+        f"https://api.getpostman.com/environments/{env_id}",
+        {"environment": remote_env},
+    )
+    print(f"Updated environment variables on {remote_env['name']}.")
+
+
 def push_collection(payload: dict[str, Any]) -> None:
     remote = postman_request(
         "GET",
         f"https://api.getpostman.com/collections/{COLLECTION_ID}",
     )
     remote_collection = remote["collection"]
-    local_collection = payload["collection"]
-
-    # Preserve remote IDs for existing folders/requests; replace platform-owner folder.
-    remote_items = remote_collection.get("item", [])
-    local_items = local_collection.get("item", [])
-    merged_items: list[dict[str, Any]] = []
+    local_items = payload["collection"].get("item", [])
     platform_folder = next(
-        (i for i in local_items if i.get("name") == "12 - Platform Owner"), None
+        (item for item in local_items if item.get("name") == "12 - Platform Owner"),
+        build_platform_owner_folder(),
     )
-    for remote_folder in remote_items:
-        if remote_folder.get("name") == "12 - Platform Owner":
-            if platform_folder:
-                platform_folder["id"] = remote_folder.get("id")
+    folder_id = _find_or_create_platform_folder(remote_collection)
+
+    existing_names = set()
+    for folder in remote_collection.get("item", []):
+        if folder.get("name") == "12 - Platform Owner":
+            for request in folder.get("item", []):
+                existing_names.add(request.get("name"))
+
+    created = 0
+    for item in platform_folder.get("item", []):
+        if item["name"] in existing_names:
             continue
-        merged_items.append(remote_folder)
-    if platform_folder:
-        merged_items.append(platform_folder)
-    else:
-        merged_items.extend(
-            i for i in local_items if i.get("name") != "12 - Platform Owner"
+        postman_request(
+            "POST",
+            f"https://api.getpostman.com/collections/{COLLECTION_ID}/requests",
+            _item_to_postman_request(item, folder_id),
         )
+        created += 1
 
-    local_collection["item"] = merged_items
-    local_collection["info"]["_postman_id"] = remote_collection["info"].get(
-        "_postman_id", COLLECTION_ID.split("-", 1)[-1]
+    _sync_environment_variables()
+    print(
+        f"Synced folder '12 - Platform Owner' on collection {COLLECTION_ID} "
+        f"({created} new requests, {len(existing_names)} already present)."
     )
-    local_collection["info"]["uid"] = remote_collection["info"].get("uid", COLLECTION_ID)
-
-    postman_request(
-        "PUT",
-        f"https://api.getpostman.com/collections/{COLLECTION_ID}",
-        {"collection": local_collection},
-    )
-    print(f"Pushed collection {COLLECTION_ID} to Postman.")
 
 
 def find_spec_id() -> str | None:
     try:
-        data = postman_request("GET", "https://api.getpostman.com/specs")
+        data = postman_request(
+            "GET",
+            f"https://api.getpostman.com/specs?workspace={WORKSPACE_ID}",
+        )
     except urllib.error.HTTPError:
         return None
     specs = data.get("data") or data.get("specs") or []
