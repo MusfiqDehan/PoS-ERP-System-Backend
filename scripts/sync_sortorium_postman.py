@@ -419,23 +419,6 @@ def build_platform_owner_folder() -> dict[str, Any]:
             ),
             auth=auth,
         ),
-        _request(
-            name="Get platform permissions (legacy alias)",
-            method="GET",
-            path_segments=[
-                "api",
-                "v1",
-                "tenancy",
-                "admin",
-                "me",
-                "platform-permissions",
-            ],
-            description=(
-                "Legacy alias for platform permissions during migration. Prefer "
-                "GET /api/v1/platform-owner/me/permissions/. Requires platform JWT."
-            ),
-            auth=auth,
-        ),
     ]
 
     return {
@@ -458,6 +441,20 @@ def ensure_collection_variables(collection: dict[str, Any]) -> None:
     ]:
         if key not in keys:
             variables.append({"key": key, "value": value})
+
+
+def remove_stale_postman_folders(payload: dict[str, Any]) -> bool:
+    """Drop removed API folders from the local Postman payload."""
+    collection = payload["collection"]
+    items = collection.get("item", [])
+    stale_names = {
+        "10 - Platform Admin - Tenancy",
+    }
+    filtered = [item for item in items if item.get("name") not in stale_names]
+    if len(filtered) == len(items):
+        return False
+    collection["item"] = filtered
+    return True
 
 
 def merge_platform_owner_folder(payload: dict[str, Any]) -> bool:
@@ -695,6 +692,7 @@ def main() -> int:
         return 1
 
     payload = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
+    removed = remove_stale_postman_folders(payload)
     added = merge_platform_owner_folder(payload)
     info = payload["collection"]["info"]
     info["description"] = (
@@ -707,6 +705,8 @@ def main() -> int:
     )
     action = "Added" if added else "Updated"
     print(f"{action} folder '12 - Platform Owner' in {PAYLOAD_PATH}")
+    if removed:
+        print("Removed stale folder '10 - Platform Admin - Tenancy' from payload.")
 
     if args.push:
         push_collection(payload)
