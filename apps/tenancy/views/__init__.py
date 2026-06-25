@@ -15,6 +15,7 @@ from apps.tenancy.views.platform_admin import (
     TenantAdminListView,
     TenantFeatureOverrideView,
 )
+from apps.tenancy.views.platform_permissions import PlatformPermissionsAliasView
 from apps.tenancy.views.profile_assets import ProfilePictureView
 from apps.tenancy.views.register import TenantSelfRegistrationView
 from apps.tenancy.views.settings import TenantBrandingView, TenantCompanyLogoView
@@ -28,6 +29,7 @@ __all__ = [
     "PasswordResetConfirmView",
     "PasswordResetRequestView",
     "PasswordSetupView",
+    "PlatformPermissionsAliasView",
     "ProfilePictureView",
     "TenantAdminListView",
     "TenantBrandingView",
