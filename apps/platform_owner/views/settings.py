@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
+from typing import Any
 
 from apps.platform_owner.openapi import PLATFORM_OWNER_TAG, envelope_responses
 from apps.platform_owner.serializers import PlatformSettingsSerializer
@@ -50,10 +51,10 @@ class PlatformSettingsView(ModelCRUDView):
     def get_object(self):
         return PlatformSettings.get_solo()
 
-    def get(self, request: Request, **kwargs) -> Response:
+    def get(self, request: Request, pk: Any | None = None, **kwargs: Any) -> Response:
         return self._retrieve(None)
 
-    def patch(self, request: Request, **kwargs) -> Response:
+    def patch(self, request: Request, pk: Any, **kwargs: Any) -> Response:
         return self._update(None, request, partial=True)
 
     def get_success_message(self, action: str) -> str:
