@@ -90,6 +90,33 @@ class EmailService:
         )
 
     @classmethod
+    def enqueue_platform_invite(
+        cls,
+        *,
+        to_email: str,
+        invitee_full_name: str,
+        role_name: str,
+        invitation_url: str,
+        expires_at,
+    ) -> EmailQueue:
+        return cls.enqueue(
+            tenant=None,
+            to_email=to_email,
+            purpose=EmailQueue.PURPOSE_PLATFORM_INVITE,
+            subject="You have been invited to the Sortorium platform team",
+            template_name="tenancy/emails/invitation_email.html",
+            context={
+                "company_name": "Sortorium Platform",
+                "subdomain": "platform",
+                "invitation_url": invitation_url,
+                "expires_at": expires_at,
+                "invitee_full_name": invitee_full_name,
+                "role_name": role_name,
+            },
+            fallback_text=f"Accept your platform invitation by visiting {invitation_url}",
+        )
+
+    @classmethod
     def enqueue_password_reset(
         cls,
         *,
