@@ -5,12 +5,34 @@ Authenticated requests read tenant_schema from the signed JWT.
 Unauthenticated public endpoints may use X-Tenant-Schema or X-Tenant-Subdomain.
 """
 
+from django.db import connection
+from django.urls import set_urlconf
 from django_tenants.middleware.main import TenantMainMiddleware
 from django_tenants.utils import get_public_schema_name
 
 from shared.cache.helpers import DOMAIN_TTL, domain_schema_key, get_cached_value
 
 from apps.tenancy.models import Domain
+
+# Paths served only from PUBLIC_SCHEMA_URLCONF and the public PostgreSQL schema.
+_PUBLIC_SCHEMA_PATH_PREFIXES = (
+    "/api/v1/platform-owner/",
+    "/api/v1/tenancy/register/",
+    "/api/v1/tenancy/tokens/",
+    "/api/v1/tenancy/password/setup/",
+    "/api/v1/tenancy/password/reset/",
+    "/api/v1/tenancy/auth/",
+    "/api/v1/tenancy/admin/",
+    "/api/v1/billing/subscription/success/",
+    "/api/v1/billing/subscription/fail/",
+    "/api/v1/billing/subscription/cancel/",
+    "/api/v1/billing/subscription/ipn/",
+)
+
+
+def _force_public_schema_path(request) -> bool:
+    path = getattr(request, "path", "") or ""
+    return path.startswith(_PUBLIC_SCHEMA_PATH_PREFIXES)
 
 
 def _derive_schema_from_subdomain(subdomain: str) -> str:
@@ -19,6 +41,15 @@ def _derive_schema_from_subdomain(subdomain: str) -> str:
 
 class MobileAwareTenantMainMiddleware(TenantMainMiddleware):
     """TenantMainMiddleware that also honours JWT/header tenant hints."""
+
+    def process_request(self, request):
+        if _force_public_schema_path(request):
+            connection.set_schema_to_public()
+            self.setup_url_routing(request, force_public=True)
+            if getattr(request, "urlconf", None):
+                set_urlconf(request.urlconf)
+            return None
+        return super().process_request(request)
 
     def _schema_from_token(self, request):
         auth = request.META.get("HTTP_AUTHORIZATION", "")
@@ -60,6 +91,8 @@ class MobileAwareTenantMainMiddleware(TenantMainMiddleware):
         )
 
     def hostname_from_request(self, request):
+        if _force_public_schema_path(request):
+            return super().hostname_from_request(request)
         schema = self._hint_schema(request)
         if schema and schema != get_public_schema_name():
             domain = self._domain_for_schema(schema)
