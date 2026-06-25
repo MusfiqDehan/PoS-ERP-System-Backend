@@ -29,7 +29,7 @@ def test_openapi_schema_includes_public_tenancy_routes():
     for route in (
         "/api/v1/tenancy/register/",
         "/api/v1/tenancy/auth/login/",
-        "/api/v1/tenancy/admin/tenants/",
+        "/api/v1/platform-owner/tenants/",
     ):
         assert route in paths, f"missing public tenancy route: {route}"
     register_post = paths["/api/v1/tenancy/register/"]["post"]
