@@ -77,15 +77,12 @@ class PasswordService:
                         email=email,
                         password=password,
                         full_name=invitation.invitee_full_name,
-                        tenant=tenant,
                         email_verified=True,
                         password_set_at=setup_time,
                     )
                 else:
                     user.set_password(password)
                     user.is_active = True
-                    if user.tenant_id is None:
-                        user.tenant = tenant
                     user.email_verified = True
                     user.password_set_at = setup_time
                     if invitation.invitee_full_name and not user.full_name:
