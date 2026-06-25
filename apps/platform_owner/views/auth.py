@@ -1,5 +1,4 @@
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
@@ -18,6 +17,7 @@ from apps.tenancy.services import PasswordService, PlatformPermissionService
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
+from shared.views.public import PublicAPIView
 
 
 @public_post_schema(
@@ -34,8 +34,7 @@ from shared.responses.error_codes import ErrorCode
         (status.HTTP_403_FORBIDDEN, "Platform access denied."),
     ),
 )
-class PlatformAuthenticationView(APIView):
-    permission_classes = [AllowAny]
+class PlatformAuthenticationView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "platform_auth"
 
@@ -82,8 +81,7 @@ class PlatformAuthenticationView(APIView):
         (status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token."),
     ),
 )
-class PlatformTokenRefreshView(APIView):
-    permission_classes = [AllowAny]
+class PlatformTokenRefreshView(PublicAPIView):
 
     def post(self, request):
         serializer = PlatformTokenRefreshSerializer(data=request.data)
@@ -186,8 +184,7 @@ class PlatformChangePasswordView(APIView):
         (status.HTTP_200_OK, "Generic success regardless of account existence."),
     ),
 )
-class PlatformPasswordResetRequestView(APIView):
-    permission_classes = [AllowAny]
+class PlatformPasswordResetRequestView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "platform_password_reset"
 
@@ -213,8 +210,7 @@ class PlatformPasswordResetRequestView(APIView):
         (status.HTTP_400_BAD_REQUEST, "Invalid token or validation error."),
     ),
 )
-class PlatformPasswordResetConfirmView(APIView):
-    permission_classes = [AllowAny]
+class PlatformPasswordResetConfirmView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "platform_password_setup"
 
