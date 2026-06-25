@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from apps.tenancy.models import (
     Domain,
@@ -31,17 +30,24 @@ class DomainAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class UserAdmin(DjangoUserAdmin):
+class UserAdmin(admin.ModelAdmin):
     ordering = ("email",)
     list_display = (
         "email",
         "full_name",
-        "is_staff",
-        "is_superuser",
         "is_active",
         "tenant",
+        "email_verified",
+        "created_at",
     )
     search_fields = ("email", "full_name", "phone")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "password_set_at",
+        "last_login",
+        "deleted_at",
+    )
     fieldsets = (
         (None, {"fields": ("email", "phone", "password")}),
         (
@@ -49,35 +55,30 @@ class UserAdmin(DjangoUserAdmin):
             {"fields": ("full_name", "tenant", "email_verified", "password_set_at")},
         ),
         (
-            "Permissions",
+            "Status",
             {
                 "fields": (
                     "is_active",
-                    "is_staff",
-                    "is_superuser",
-                    "groups",
-                    "user_permissions",
+                    "is_published",
+                    "is_deleted",
+                    "deleted_at",
                 )
             },
         ),
-        ("Dates", {"fields": ("last_login", "created_at")}),
-    )
-    add_fieldsets = (
         (
-            None,
+            "Audit",
             {
-                "classes": ("wide",),
                 "fields": (
-                    "email",
-                    "password1",
-                    "password2",
-                    "is_staff",
-                    "is_superuser",
-                ),
+                    "created_at",
+                    "updated_at",
+                    "created_by",
+                    "updated_by",
+                    "deleted_by",
+                    "last_login",
+                )
             },
         ),
     )
-    readonly_fields = ("created_at", "password_set_at", "last_login")
 
 
 @admin.register(Invitation)
@@ -96,22 +97,15 @@ class InvitationAdmin(admin.ModelAdmin):
 
 @admin.register(EmailQueue)
 class EmailQueueAdmin(admin.ModelAdmin):
-    list_display = (
-        "to_email",
-        "purpose",
-        "status",
-        "attempts",
-        "created_at",
-        "sent_at",
-    )
-    list_filter = ("status", "purpose")
-    search_fields = ("to_email", "subject")
+    list_display = ("to_email", "purpose", "status", "created_at", "sent_at")
+    search_fields = ("to_email",)
+    list_filter = ("purpose", "status")
 
 
 @admin.register(TenantAuditLog)
 class TenantAuditLogAdmin(admin.ModelAdmin):
-    list_display = ("action", "actor_email", "tenant", "target_type", "created_at")
-    search_fields = ("action", "actor_email", "target_id")
+    list_display = ("action", "tenant", "actor_email", "created_at")
+    search_fields = ("action", "actor_email")
     list_filter = ("action",)
 
 
@@ -119,17 +113,21 @@ class TenantAuditLogAdmin(admin.ModelAdmin):
 class PlatformRoleAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "is_system")
     search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(PlatformRolePermission)
 class PlatformRolePermissionAdmin(admin.ModelAdmin):
     list_display = ("role", "module_key", "permission_level")
-    list_filter = ("permission_level",)
+    list_filter = ("module_key", "permission_level")
+    search_fields = ("role__name", "module_key")
 
 
 @admin.register(PlatformUserRole)
 class PlatformUserRoleAdmin(admin.ModelAdmin):
-    list_display = ("user", "role", "created_at")
+    list_display = ("user", "role", "assigned_by", "created_at")
+    search_fields = ("user__email", "role__slug")
+    list_filter = ("role",)
 
 
 @admin.register(Feature)
@@ -141,9 +139,4 @@ class FeatureAdmin(admin.ModelAdmin):
 
 @admin.register(PlatformSettings)
 class PlatformSettingsAdmin(admin.ModelAdmin):
-    list_display = (
-        "default_timezone",
-        "default_language",
-        "default_currency",
-        "updated_at",
-    )
+    list_display = ("id", "default_timezone", "default_language", "updated_at")

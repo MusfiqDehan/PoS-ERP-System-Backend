@@ -3,6 +3,7 @@ from apps.tenancy.services.auth import AuthService
 from apps.tenancy.services.email import EmailService
 from apps.tenancy.services.features import (
     get_tenant_enabled_feature_keys,
+    patch_tenant_feature_overrides,
     set_tenant_features,
     tenant_has_feature,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "TenantAuditService",
     "TenantRegistrationService",
     "get_tenant_enabled_feature_keys",
+    "patch_tenant_feature_overrides",
     "set_tenant_features",
     "tenant_has_feature",
 ]

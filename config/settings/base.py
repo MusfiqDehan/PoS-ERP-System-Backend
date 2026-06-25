@@ -43,6 +43,8 @@ ALLOWED_HOSTS = [
 SHARED_APPS = [
     "django_tenants",
     "apps.tenancy.apps.TenancyConfig",
+    "apps.billing.apps.BillingConfig",
+    "shared.apps.SharedConfig",
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.admin",
@@ -57,9 +59,11 @@ SHARED_APPS = [
 TENANT_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
+    "shared.apps.SharedConfig",
     "apps.tenancy.apps.TenancyConfig",
     "apps.access.apps.AccessConfig",
     "apps.branch.apps.BranchConfig",
+    "apps.billing.apps.BillingConfig",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -203,7 +207,8 @@ if _database_url:
     _db_cfg = dj_database_url.parse(
         _database_url,
         conn_max_age=DB_CONN_MAX_AGE,
-        conn_health_checks=True,
+        conn_health_checks=os.environ.get("USE_PGBOUNCER", "").strip().lower()
+        not in ("1", "true", "yes", "on"),
     )
     db_host = _db_cfg.get("HOST")
     if not is_running_in_docker() and db_host in {
@@ -236,6 +241,14 @@ if _database_url:
         if resolved_host:
             _db_cfg["HOST"] = resolved_host
     _db_cfg["ENGINE"] = "django_tenants.postgresql_backend"
+    if os.environ.get("USE_PGBOUNCER", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
+        # Required for PgBouncer transaction pooling with Django.
+        _db_cfg["DISABLE_SERVER_SIDE_CURSORS"] = True
     DATABASES = {"default": _db_cfg}
 else:
     DATABASES = {
@@ -368,7 +381,53 @@ SPECTACULAR_SETTINGS = {
             }
         }
     },
-    "SWAGGER_UI_SETTINGS": {"persistAuthorization": True},
+    "TAGS": [
+        {
+            "name": "Tenancy - Public",
+            "description": "Unauthenticated public-schema tenant onboarding, auth, and password flows.",
+        },
+        {
+            "name": "Tenancy - Tenant",
+            "description": "Authenticated tenant-scoped user, branding, and settings operations.",
+        },
+        {
+            "name": "Tenancy - Platform Admin",
+            "description": "Platform administrator operations for tenant lifecycle and feature overrides.",
+        },
+        {
+            "name": "Billing - Public",
+            "description": "Unauthenticated payment gateway callbacks and subscription redirect handlers.",
+        },
+        {
+            "name": "Billing - Tenant",
+            "description": "Tenant administrator subscription, invoice, and gateway configuration operations.",
+        },
+        {
+            "name": "Billing - Platform Admin",
+            "description": "Platform administrator billing catalog, gateways, packages, and invoice management.",
+        },
+        {
+            "name": "Access - Tenant",
+            "description": "Tenant-scoped role-based access control for roles, permissions, and assignments.",
+        },
+        {
+            "name": "Branch - Public",
+            "description": "Unauthenticated read-only branch listings for tenant storefronts.",
+        },
+        {
+            "name": "Branch - Tenant",
+            "description": "Authenticated tenant branch management, summaries, and manager assignment.",
+        },
+    ],
+    "POSTPROCESSING_HOOKS": [
+        "config.openapi.enforce_operation_descriptions",
+    ],
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "displayOperationId": False,
+        "docExpansion": "list",
+        "filter": True,
+    },
 }
 
 EMAIL_BACKEND = os.environ.get(

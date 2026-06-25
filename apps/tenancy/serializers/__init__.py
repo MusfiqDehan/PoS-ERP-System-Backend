@@ -3,6 +3,7 @@ from apps.tenancy.serializers.auth import (
     TenantAuthSerializer,
     TokenRefreshSerializer,
 )
+from apps.tenancy.serializers.branding import TenantBrandingSerializer
 from apps.tenancy.serializers.invitation import (
     InvitationTokenSerializer,
     PasswordResetRequestSerializer,
@@ -21,6 +22,7 @@ __all__ = [
     "PasswordResetRequestSerializer",
     "PasswordSetupSerializer",
     "TenantAuthSerializer",
+    "TenantBrandingSerializer",
     "TenantListSerializer",
     "TenantSelfRegistrationSerializer",
     "TenantUpdateSerializer",

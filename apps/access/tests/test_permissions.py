@@ -9,6 +9,19 @@ from apps.access.services.permissions import get_user_permission_map
 
 
 @pytest.mark.django_db
+def test_tenant_admin_role_grants_full_permission(tenant, tenant_user):
+    from apps.access.services.permissions import get_user_permission_level
+
+    with schema_context(tenant.schema_name):
+        connection.set_tenant(tenant)
+        admin_role = Role.objects.create(name="Admin", slug="admin", is_system=True)
+        UserRole.objects.create(
+            user_id=tenant_user.id, user_email=tenant_user.email, role=admin_role
+        )
+        assert get_user_permission_level(tenant_user, "dashboard") == "full"
+
+
+@pytest.mark.django_db
 def test_user_permission_map_aggregates_highest_level(tenant, tenant_user):
     with schema_context(tenant.schema_name):
         connection.set_tenant(tenant)

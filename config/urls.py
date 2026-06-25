@@ -15,6 +15,14 @@ urlpatterns = [
         include(("apps.tenancy.urls.tenant", "tenancy"), namespace="tenancy-tenant"),
     ),
     path("api/v1/access/", include(("apps.access.urls", "access"), namespace="access")),
+    path(
+        "api/v1/billing/",
+        include(("apps.billing.urls.tenant", "billing"), namespace="billing-tenant"),
+    ),
+    path(
+        "api/v1/branches/",
+        include(("apps.branch.urls.tenant", "branch"), namespace="branch"),
+    ),
 ]
 
 urlpatterns += dev_tooling_urlpatterns()

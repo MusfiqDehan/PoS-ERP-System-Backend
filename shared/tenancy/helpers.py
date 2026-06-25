@@ -3,8 +3,14 @@ from __future__ import annotations
 from apps.access.models import UserRole
 
 
+def user_has_tenant_admin_role(user) -> bool:
+    if not (user and user.is_authenticated):
+        return False
+    return UserRole.objects.filter(user_id=user.id, role__slug="admin").exists()
+
+
 def is_tenant_admin_user(user) -> bool:
-    return bool(user and user.is_authenticated and (user.is_superuser or user.is_staff))
+    return user_has_tenant_admin_role(user)
 
 
 def get_branch_manager_scope_ids(user):
@@ -62,6 +68,32 @@ def apply_branch_filter_for_tenant_admin(
     except (TypeError, ValueError):
         return queryset.none()
     return queryset.filter(**{branch_field: branch_id_value})
+
+
+def scope_users_by_branch_access(queryset, user, branch_filter_id=None):
+    """Filter tenant users by branch_manager scope or optional admin branch filter."""
+    from uuid import UUID
+
+    from apps.access.models import UserRole
+
+    scope_ids = get_branch_manager_scope_ids(user)
+    if scope_ids is None:
+        if is_tenant_admin_user(user) and branch_filter_id not in (None, "", "all"):
+            try:
+                branch_uuid = UUID(str(branch_filter_id))
+            except (TypeError, ValueError):
+                return queryset.none()
+            user_ids = UserRole.objects.filter(branch_id=branch_uuid).values_list(
+                "user_id", flat=True
+            )
+            return queryset.filter(id__in=user_ids).distinct()
+        return queryset
+    if not scope_ids:
+        return queryset.none()
+    user_ids = UserRole.objects.filter(branch_id__in=scope_ids).values_list(
+        "user_id", flat=True
+    )
+    return queryset.filter(id__in=user_ids).distinct()
 
 
 def scope_queryset_by_branch_access(

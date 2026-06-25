@@ -148,13 +148,13 @@ def invalidate_notification_count(schema_name: str, user_id) -> None:
 
 
 def invalidate_tenant_admin_notification_counts(schema_name: str) -> None:
-    from django.contrib.auth import get_user_model
-    from django.db.models import Q
+    from apps.access.models import UserRole
+    from django_tenants.utils import schema_context
 
-    User = get_user_model()
-    admin_ids = User.objects.filter(
-        Q(is_staff=True) | Q(is_superuser=True)
-    ).values_list("id", flat=True)
+    with schema_context(schema_name):
+        admin_ids = UserRole.objects.filter(role__slug="admin").values_list(
+            "user_id", flat=True
+        )
     for user_id in admin_ids:
         invalidate_notification_count(schema_name, user_id)
 

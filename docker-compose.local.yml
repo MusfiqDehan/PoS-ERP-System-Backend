@@ -6,14 +6,6 @@ services:
     container_name: sortorium-backend-local
     image: sortorium-backend-local:latest
     env_file: .env.local
-    environment:
-      - DEBUG=true
-      - DJANGO_SETTINGS_MODULE=config.settings.local
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
     ports:
       - "8002:8002"
     depends_on:
@@ -34,16 +26,9 @@ services:
     container_name: sortorium-celery-worker-local
     image: sortorium-backend-local:latest
     user: "app"
-    env_file: .env.local
-    environment:
-      - DEBUG=true
-      - DJANGO_SETTINGS_MODULE=config.settings.local
-      - SKIP_DB_BOOTSTRAP=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
+    env_file:
+      - .env.local
+      - .env.local.celery
     depends_on:
       db:
         condition: service_healthy
@@ -64,16 +49,9 @@ services:
     container_name: sortorium-celery-beat-local
     image: sortorium-backend-local:latest
     user: "app"
-    env_file: .env.local
-    environment:
-      - DEBUG=true
-      - DJANGO_SETTINGS_MODULE=config.settings.local
-      - SKIP_DB_BOOTSTRAP=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
+    env_file:
+      - .env.local
+      - .env.local.celery
     depends_on:
       db:
         condition: service_healthy
@@ -87,14 +65,29 @@ services:
       - backend_media_local:/app/media
     restart: unless-stopped
 
+  redis-sysctl-init:
+    image: alpine:3.21
+    container_name: sortorium-redis-sysctl-init-local
+    privileged: true
+    network_mode: host
+    command: ["sh", "-c", "sysctl -w vm.overcommit_memory=1"]
+    restart: "no"
+
   redis:
     image: redis:8.8-alpine
     container_name: sortorium-redis-local
-    command: ["redis-server", "--save", "60", "1000", "--appendonly", "yes"]
+    env_file: .env.local
+    depends_on:
+      redis-sysctl-init:
+        condition: service_completed_successfully
+    command:
+      - sh
+      - -c
+      - redis-server --save 60 1000 --appendonly yes --requirepass "$$REDIS_PASSWORD"
     ports:
       - "6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 5s
       retries: 5

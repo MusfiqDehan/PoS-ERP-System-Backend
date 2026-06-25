@@ -73,9 +73,10 @@ def test_local_settings_define_internal_ips_and_silk_auth_disabled():
     assert "127.0.0.1" in local.INTERNAL_IPS
     assert local.SILKY_AUTHENTICATION is False
     assert local.SILKY_AUTHORISATION is False
-    assert "debug_toolbar.panels.profiling.ProfilingPanel" in local.DEBUG_TOOLBAR_CONFIG[
-        "DISABLE_PANELS"
-    ]
+    assert (
+        "debug_toolbar.panels.profiling.ProfilingPanel"
+        in local.DEBUG_TOOLBAR_CONFIG["DISABLE_PANELS"]
+    )
 
 
 def test_production_settings_exclude_dev_tooling():
@@ -113,7 +114,11 @@ def test_debug_toolbar_url_pattern_registered_when_debug_enabled():
     assert match.namespace == "djdt"
 
 
-@override_settings(DEBUG=True, ROOT_URLCONF="config.urls")
+@override_settings(
+    DEBUG=True,
+    ROOT_URLCONF="config.urls",
+    INSTALLED_APPS=importlib.import_module("config.settings.local").INSTALLED_APPS,
+)
 def test_debug_toolbar_url_pattern_registered_on_tenant_urlconf():
     import config.urls as tenant_urls
 

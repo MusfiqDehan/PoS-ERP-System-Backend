@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 from django_tenants.utils import schema_context
 
+from apps.access.models import Role, UserRole
 from apps.tenancy.models import Invitation
 from apps.tenancy.services.registration import (
     TenantRegistrationService,
@@ -77,8 +78,6 @@ class PasswordService:
                         password=password,
                         full_name=invitation.invitee_full_name,
                         tenant=tenant,
-                        is_staff=True,
-                        is_superuser=True,
                         email_verified=True,
                         password_set_at=setup_time,
                     )
@@ -91,10 +90,16 @@ class PasswordService:
                     user.password_set_at = setup_time
                     if invitation.invitee_full_name and not user.full_name:
                         user.full_name = invitation.invitee_full_name
-                    if is_owner_setup:
-                        user.is_staff = True
-                        user.is_superuser = True
                     user.save()
+
+                if is_owner_setup:
+                    admin_role = Role.objects.filter(slug="admin").first()
+                    if admin_role:
+                        UserRole.objects.get_or_create(
+                            user_id=user.id,
+                            role=admin_role,
+                            defaults={"user_email": email},
+                        )
 
             invitation.used_at = setup_time
             invitation.save(update_fields=["used_at"])

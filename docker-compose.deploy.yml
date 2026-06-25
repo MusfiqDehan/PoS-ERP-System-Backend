@@ -1,0 +1,60 @@
+# Blue-green deploy overlay. Use with:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.deploy.yml up -d backend_candidate
+#
+# Candidate routers use a -candidate suffix (Traefik requires unique router names)
+# but register to the same traefik.http.services.backend service for load balancing.
+
+services:
+  backend_candidate:
+    extends:
+      file: docker-compose.prod.yml
+      service: backend
+    container_name: sortorium-backend-candidate
+    image: sortorium-backend:${IMAGE_TAG:-latest}
+    restart: "no"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.http.routers.backend-api-candidate.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/api`) || PathPrefix(`/admin/`) || Path(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-api-candidate.entrypoints=websecure"
+      - "traefik.http.routers.backend-api-candidate.tls=true"
+      - "traefik.http.routers.backend-api-candidate.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-api-candidate.tls.domains[0].main=sortorium.com"
+      - "traefik.http.routers.backend-api-candidate.tls.domains[0].sans=*.sortorium.com"
+      - "traefik.http.routers.backend-api-candidate.priority=100"
+      - "traefik.http.routers.backend-api-candidate.middlewares=security-headers@file,compress@file,api-ratelimit@file"
+      - "traefik.http.routers.backend-api-candidate.service=backend"
+      - "traefik.http.routers.backend-ws-candidate.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.backend-ws-candidate.entrypoints=websecure"
+      - "traefik.http.routers.backend-ws-candidate.tls=true"
+      - "traefik.http.routers.backend-ws-candidate.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-ws-candidate.tls.domains[0].main=sortorium.com"
+      - "traefik.http.routers.backend-ws-candidate.tls.domains[0].sans=*.sortorium.com"
+      - "traefik.http.routers.backend-ws-candidate.priority=100"
+      - "traefik.http.routers.backend-ws-candidate.middlewares=security-headers@file,ws-headers@file"
+      - "traefik.http.routers.backend-ws-candidate.service=backend"
+      - "traefik.http.routers.backend-adms-candidate.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/iclock`) || PathPrefix(`/cdata`) || PathPrefix(`/getrequest`) || PathPrefix(`/devicecmd`))"
+      - "traefik.http.routers.backend-adms-candidate.entrypoints=web"
+      - "traefik.http.routers.backend-adms-candidate.priority=100"
+      - "traefik.http.routers.backend-adms-candidate.middlewares=adms-http-headers@file"
+      - "traefik.http.routers.backend-adms-candidate.service=backend"
+      - "traefik.http.routers.backend-custom-api-candidate.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/api`) || PathPrefix(`/admin/`) || Path(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-custom-api-candidate.entrypoints=websecure"
+      - "traefik.http.routers.backend-custom-api-candidate.tls=true"
+      - "traefik.http.routers.backend-custom-api-candidate.tls.certresolver=customdomains"
+      - "traefik.http.routers.backend-custom-api-candidate.priority=100"
+      - "traefik.http.routers.backend-custom-api-candidate.middlewares=security-headers@file,compress@file,api-ratelimit@file"
+      - "traefik.http.routers.backend-custom-api-candidate.service=backend"
+      - "traefik.http.routers.backend-custom-ws-candidate.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.backend-custom-ws-candidate.entrypoints=websecure"
+      - "traefik.http.routers.backend-custom-ws-candidate.tls=true"
+      - "traefik.http.routers.backend-custom-ws-candidate.tls.certresolver=customdomains"
+      - "traefik.http.routers.backend-custom-ws-candidate.priority=100"
+      - "traefik.http.routers.backend-custom-ws-candidate.middlewares=security-headers@file,ws-headers@file"
+      - "traefik.http.routers.backend-custom-ws-candidate.service=backend"
+      - "traefik.http.routers.backend-custom-adms-candidate.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/iclock`) || PathPrefix(`/cdata`) || PathPrefix(`/getrequest`) || PathPrefix(`/devicecmd`))"
+      - "traefik.http.routers.backend-custom-adms-candidate.entrypoints=web"
+      - "traefik.http.routers.backend-custom-adms-candidate.priority=100"
+      - "traefik.http.routers.backend-custom-adms-candidate.middlewares=adms-http-headers@file"
+      - "traefik.http.routers.backend-custom-adms-candidate.service=backend"
+      - "traefik.http.services.backend.loadbalancer.server.port=8002"

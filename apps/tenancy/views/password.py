@@ -18,6 +18,11 @@ from shared.responses.error_codes import ErrorCode
 @public_post_schema(
     request=InvitationTokenSerializer,
     summary="Validate an invitation or verification token",
+    description=(
+        "Validates an invitation, email verification, or setup token on the public "
+        "schema. Returns invitation metadata when the token is valid and the tenant "
+        "workspace allows user entry."
+    ),
     responses=envelope_responses(
         (status.HTTP_200_OK, "Token is valid."),
         (status.HTTP_400_BAD_REQUEST, "Invalid or expired token."),
@@ -54,6 +59,10 @@ class InvitationValidationView(APIView):
 @public_post_schema(
     request=PasswordSetupSerializer,
     summary="Set password using invitation or verification token",
+    description=(
+        "Sets the initial password for a user using a valid invitation or verification "
+        "token. Rate limited to 20 requests per hour."
+    ),
     responses=envelope_responses(
         (status.HTTP_200_OK, "Password configured."),
         (status.HTTP_400_BAD_REQUEST, "Invalid token or password validation error."),
@@ -86,8 +95,16 @@ class PasswordSetupView(APIView):
 @public_post_schema(
     request=PasswordResetRequestSerializer,
     summary="Request a tenant password reset email",
+    description=(
+        "Requests a password reset email for a tenant user. Always returns a generic "
+        "success message to avoid account enumeration. Rate limited to 10 requests per "
+        "hour."
+    ),
     responses=envelope_responses(
-        (status.HTTP_200_OK, "Generic success message regardless of account existence."),
+        (
+            status.HTTP_200_OK,
+            "Generic success message regardless of account existence.",
+        ),
     ),
 )
 class PasswordResetRequestView(APIView):
@@ -130,5 +147,18 @@ class PasswordResetRequestView(APIView):
         return success_response(data={}, message=message)
 
 
+@public_post_schema(
+    request=PasswordSetupSerializer,
+    summary="Confirm password reset using reset token",
+    description=(
+        "Confirms a password reset by setting a new password with a valid reset token. "
+        "Uses the same payload contract as password setup. Rate limited to 20 requests "
+        "per hour."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Password configured."),
+        (status.HTTP_400_BAD_REQUEST, "Invalid token or password validation error."),
+    ),
+)
 class PasswordResetConfirmView(PasswordSetupView):
     """Dedicated endpoint for password-reset token confirmation."""

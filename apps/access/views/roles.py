@@ -2,11 +2,17 @@
 
 from django.db import connection, transaction
 from django_tenants.utils import get_public_schema_name
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.access.models import Role, RolePermission, UserRole
+from apps.access.openapi import (
+    TENANT_ACCESS_TAG,
+    document_crud_view,
+    envelope_responses,
+)
 from apps.access.permissions import IsRoleAdmin
 from apps.access.serializers import (
     RolePermissionsBulkSerializer,
@@ -26,9 +32,32 @@ from shared.cache.helpers import (
 from shared.responses import error_response, list_success_response, success_response
 from shared.responses.error_codes import ErrorCode
 from shared.tenancy.helpers import is_tenant_admin_user, scope_queryset_by_branch_access
+from shared.tenancy.limits import (
+    custom_role_capacity_exceeded,
+    role_assignment_capacity_exceeded,
+)
 from shared.views import ModelCRUDView
 
 
+@document_crud_view(
+    tags=[TENANT_ACCESS_TAG],
+    operations={
+        "GET": {
+            "summary": "List tenant roles",
+            "description": (
+                "Lists custom and system roles in the current tenant. Requires role "
+                "administrator permission."
+            ),
+        },
+        "POST": {
+            "summary": "Create tenant role",
+            "description": (
+                "Creates a custom tenant role when capacity allows. Requires role "
+                "administrator permission."
+            ),
+        },
+    },
+)
 class RoleListCreateView(ModelCRUDView):
     queryset = (
         Role.objects.all()
@@ -39,6 +68,16 @@ class RoleListCreateView(ModelCRUDView):
     permission_classes = [IsRoleAdmin]
     pagination_class = None
 
+    def _create(self, request):
+        limit_error = custom_role_capacity_exceeded()
+        if limit_error is not None:
+            return error_response(
+                message=limit_error["detail"],
+                error_code=limit_error.get("code", str(ErrorCode.PERMISSION_DENIED)),
+                http_status=status.HTTP_403_FORBIDDEN,
+            )
+        return super()._create(request)
+
     def get_success_message(self, action: str) -> str:
         return {
             "list": "Roles retrieved successfully.",
@@ -46,6 +85,36 @@ class RoleListCreateView(ModelCRUDView):
         }.get(action, "Operation successful.")
 
 
+@document_crud_view(
+    tags=[TENANT_ACCESS_TAG],
+    operations={
+        "GET": {
+            "summary": "Retrieve tenant role",
+            "description": (
+                "Returns a single role by ID. Requires role administrator permission."
+            ),
+        },
+        "PUT": {
+            "summary": "Replace tenant role",
+            "description": (
+                "Replaces a role by ID. Requires role administrator permission."
+            ),
+        },
+        "PATCH": {
+            "summary": "Update tenant role",
+            "description": (
+                "Partially updates a role by ID. Requires role administrator permission."
+            ),
+        },
+        "DELETE": {
+            "summary": "Delete tenant role",
+            "description": (
+                "Deletes a non-system role by ID. Requires role administrator "
+                "permission."
+            ),
+        },
+    },
+)
 class RoleDetailView(ModelCRUDView):
     queryset = Role.objects.all().prefetch_related("permissions")
     serializer_class = RoleSerializer
@@ -68,6 +137,34 @@ class RoleDetailView(ModelCRUDView):
         )
 
 
+@extend_schema(
+    methods=["GET"],
+    tags=[TENANT_ACCESS_TAG],
+    summary="List permissions for a role",
+    description=(
+        "Returns feature permission levels assigned to a role. Requires role "
+        "administrator permission."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Role permissions envelope."),
+        (status.HTTP_404_NOT_FOUND, "Role not found."),
+    ),
+)
+@extend_schema(
+    methods=["PUT"],
+    tags=[TENANT_ACCESS_TAG],
+    summary="Replace permissions for a role",
+    description=(
+        "Replaces the full permission set for a role. Requires role administrator "
+        "permission."
+    ),
+    request=RolePermissionsBulkSerializer,
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Permissions updated envelope."),
+        (status.HTTP_400_BAD_REQUEST, "Validation error."),
+        (status.HTTP_404_NOT_FOUND, "Role not found."),
+    ),
+)
 class RolePermissionsView(APIView):
     permission_classes = [IsRoleAdmin]
 
@@ -110,6 +207,25 @@ class RolePermissionsView(APIView):
         return success_response(data={"status": "ok"}, message="Permissions updated.")
 
 
+@document_crud_view(
+    tags=[TENANT_ACCESS_TAG],
+    operations={
+        "GET": {
+            "summary": "List user role assignments",
+            "description": (
+                "Lists user-to-role assignments scoped by branch access. Supports an "
+                "optional branch query filter. Requires role administrator permission."
+            ),
+        },
+        "POST": {
+            "summary": "Create user role assignment",
+            "description": (
+                "Assigns a role to a user when capacity allows. Requires role "
+                "administrator permission."
+            ),
+        },
+    },
+)
 class UserRoleListCreateView(ModelCRUDView):
     queryset = UserRole.objects.select_related("role", "branch").all().order_by("id")
     serializer_class = UserRoleSerializer
@@ -128,6 +244,17 @@ class UserRoleListCreateView(ModelCRUDView):
     def _create(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        role = serializer.validated_data.get("role")
+        if role is not None:
+            limit_error = role_assignment_capacity_exceeded(role.slug)
+            if limit_error is not None:
+                return error_response(
+                    message=limit_error["detail"],
+                    error_code=limit_error.get(
+                        "code", str(ErrorCode.PERMISSION_DENIED)
+                    ),
+                    http_status=status.HTTP_403_FORBIDDEN,
+                )
         actor_email = getattr(request.user, "email", "") or ""
         instance = serializer.save(assigned_by_email=actor_email)
         invalidate_user_permissions(connection.schema_name, instance.user_id)
@@ -138,6 +265,39 @@ class UserRoleListCreateView(ModelCRUDView):
         )
 
 
+@document_crud_view(
+    tags=[TENANT_ACCESS_TAG],
+    operations={
+        "GET": {
+            "summary": "Retrieve user role assignment",
+            "description": (
+                "Returns a single user role assignment by ID. Requires role administrator "
+                "permission."
+            ),
+        },
+        "PUT": {
+            "summary": "Replace user role assignment",
+            "description": (
+                "Replaces a user role assignment by ID. Requires role administrator "
+                "permission."
+            ),
+        },
+        "PATCH": {
+            "summary": "Update user role assignment",
+            "description": (
+                "Partially updates a user role assignment by ID. Requires role "
+                "administrator permission."
+            ),
+        },
+        "DELETE": {
+            "summary": "Delete user role assignment",
+            "description": (
+                "Removes a user role assignment by ID. Requires role administrator "
+                "permission."
+            ),
+        },
+    },
+)
 class UserRoleDetailView(ModelCRUDView):
     queryset = UserRole.objects.select_related("role", "branch").all()
     serializer_class = UserRoleSerializer
@@ -161,6 +321,17 @@ class UserRoleDetailView(ModelCRUDView):
         return success_response(data={}, message="User role removed.")
 
 
+@extend_schema(
+    tags=[TENANT_ACCESS_TAG],
+    summary="Get current user permissions",
+    description=(
+        "Returns the authenticated user's effective permission map, assigned roles, and "
+        "enabled tenant features. Responses may be cached per tenant user."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Current user permissions envelope."),
+    ),
+)
 class MyPermissionsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -203,6 +374,17 @@ class MyPermissionsView(APIView):
         return success_response(data=payload, message="Permissions retrieved.")
 
 
+@extend_schema(
+    tags=[TENANT_ACCESS_TAG],
+    summary="List tenant feature catalog",
+    description=(
+        "Returns the tenant feature catalog used when configuring role permissions. "
+        "Requires role administrator permission."
+    ),
+    responses=envelope_responses(
+        (status.HTTP_200_OK, "Feature catalog list envelope."),
+    ),
+)
 class TenantFeatureCatalogView(APIView):
     permission_classes = [IsRoleAdmin]
 

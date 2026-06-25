@@ -2,6 +2,7 @@ from django.db.utils import DatabaseError
 from django_tenants.utils import get_public_schema_name, schema_context
 from rest_framework import serializers
 
+from apps.access.models import UserRole
 from apps.tenancy.models import Tenant, User
 
 
@@ -42,7 +43,10 @@ class TenantListSerializer(serializers.ModelSerializer):
             return []
         try:
             with schema_context(obj.schema_name):
-                admins = User.objects.filter(is_staff=True).order_by("email", "id")
+                admin_ids = UserRole.objects.filter(role__slug="admin").values_list(
+                    "user_id", flat=True
+                )
+                admins = User.objects.filter(id__in=admin_ids).order_by("email", "id")
                 return [
                     {
                         "id": str(u.id),

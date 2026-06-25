@@ -17,7 +17,7 @@ def ensure_superadmin(user_model, email, password, stdout, tenant=None):
             return
         stdout.write(f"Superadmin already exists: {email}")
         return
-    user_model.objects.create_superuser(email=email, password=password, tenant=tenant)
+    user_model.objects.create_superadmin(email=email, password=password, tenant=tenant)
     stdout.write(f"Created superadmin: {email}")
 
 

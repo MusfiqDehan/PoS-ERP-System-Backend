@@ -82,6 +82,16 @@ PLATFORM_REGISTRY: list[RegistryItem] = [
                 "name": "Settings",
                 "route": "/platform/settings",
             },
+            {
+                "key": "platform.billing",
+                "name": "Billing",
+                "route": "/platform/billing",
+            },
+            {
+                "key": "platform.packages",
+                "name": "Packages",
+                "route": "/platform/packages",
+            },
         ],
     },
 ]

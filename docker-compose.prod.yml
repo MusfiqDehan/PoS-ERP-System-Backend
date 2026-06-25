@@ -10,18 +10,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sortorium-backend
-    image: sortorium-backend:latest
+    image: sortorium-backend:${IMAGE_TAG:-latest}
+    stop_grace_period: 30s
     env_file: .env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
-      - SKIP_DB_BOOTSTRAP=1
-      - USE_PGBOUNCER=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
-      - ASGI_WORKERS=2
     expose:
       - "8002"
     depends_on:
@@ -54,7 +45,7 @@ services:
       - "traefik.docker.network=traefik_proxy"
 
       # ── HTTPS API (rate limited) — platform hosts
-      - "traefik.http.routers.backend-api.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-api.rule=(Host(`sortorium.com`) || HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`)) && (PathPrefix(`/api`) || PathPrefix(`/admin/`) || Path(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
       - "traefik.http.routers.backend-api.entrypoints=websecure"
       - "traefik.http.routers.backend-api.tls=true"
       - "traefik.http.routers.backend-api.tls.certresolver=letsencrypt"
@@ -83,7 +74,7 @@ services:
       - "traefik.http.routers.backend-adms.service=backend"
 
       # ── HTTPS API — tenant custom domains
-      - "traefik.http.routers.backend-custom-api.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
+      - "traefik.http.routers.backend-custom-api.rule=HostRegexp(`^.+$`) && !Host(`sortorium.com`) && !HostRegexp(`^[a-z0-9][a-z0-9-]*\\.sortorium\\.com$`) && (PathPrefix(`/api`) || PathPrefix(`/admin/`) || Path(`/admin`) || PathPrefix(`/media`) || PathPrefix(`/static`))"
       - "traefik.http.routers.backend-custom-api.entrypoints=websecure"
       - "traefik.http.routers.backend-custom-api.tls=true"
       - "traefik.http.routers.backend-custom-api.tls.certresolver=customdomains"
@@ -116,17 +107,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sortorium-celery-worker
-    image: sortorium-backend:latest
+    image: sortorium-backend:${IMAGE_TAG:-latest}
     env_file: .env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
-      - SKIP_DB_BOOTSTRAP=1
-      - USE_PGBOUNCER=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
     depends_on:
       pgbouncer:
         condition: service_started
@@ -163,16 +145,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sortorium-celery-beat
-    image: sortorium-backend:latest
+    image: sortorium-backend:${IMAGE_TAG:-latest}
     env_file: .env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings
-      - USE_PGBOUNCER=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_CACHE_URL=redis://redis:6379/2
     depends_on:
       pgbouncer:
         condition: service_started
@@ -195,13 +169,16 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer:v1.25.2-p0
     container_name: sortorium-pgbouncer
-    env_file: .env.prod
+    env_file: .env.pgbouncer.prod
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      POOL_MODE: session
-      MAX_CLIENT_CONN: 200
-      DEFAULT_POOL_SIZE: 20
-      AUTH_TYPE: scram-sha-256
+      LISTEN_PORT: "6432"
+      POOL_MODE: transaction
+      DEFAULT_POOL_SIZE: "25"
+      RESERVE_POOL_SIZE: "5"
+      MAX_DB_CONNECTIONS: "40"
+      SERVER_IDLE_TIMEOUT: "60"
+      CLIENT_IDLE_TIMEOUT: "60"
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
     depends_on:
       db:
         condition: service_healthy
@@ -221,6 +198,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./deploy/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./deploy/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -232,26 +210,30 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  redis-sysctl-init:
+    image: alpine:3.21
+    container_name: sortorium-redis-sysctl-init
+    privileged: true
+    network_mode: host
+    command: ["sh", "-c", "sysctl -w vm.overcommit_memory=1"]
+    restart: "no"
+    logging: *default-logging
+
   redis:
     image: redis:8.8-alpine
     container_name: sortorium-redis
+    env_file: .env.prod
+    depends_on:
+      redis-sysctl-init:
+        condition: service_completed_successfully
     ports:
       - "6380:6379"
     command:
-      [
-        "redis-server",
-        "--save",
-        "300",
-        "1000",
-        "--appendonly",
-        "yes",
-        "--maxmemory",
-        "384mb",
-        "--maxmemory-policy",
-        "allkeys-lru",
-      ]
+      - sh
+      - -c
+      - redis-server --save 300 1000 --appendonly yes --maxmemory 384mb --maxmemory-policy allkeys-lru --requirepass "$$REDIS_PASSWORD"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 5s
       retries: 5
