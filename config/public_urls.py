@@ -29,6 +29,13 @@ urlpatterns = [
         include(("apps.tenancy.urls.public", "tenancy"), namespace="tenancy-public"),
     ),
     path(
+        "api/v1/platform-owner/",
+        include(
+            ("apps.platform_owner.urls.public", "platform_owner"),
+            namespace="platform-owner-public",
+        ),
+    ),
+    path(
         "api/v1/billing/",
         include(("apps.billing.urls.public", "billing"), namespace="billing-public"),
     ),
