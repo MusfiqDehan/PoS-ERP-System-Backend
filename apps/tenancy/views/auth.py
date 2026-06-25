@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
@@ -15,10 +15,12 @@ from apps.tenancy.serializers import (
     UserProfileSerializer,
 )
 from apps.tenancy.services import AuthService, PasswordService, TenantAuditService
+from django.db.utils import ProgrammingError
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
 from shared.services.asset_attachment import serialize_asset_summary
+from shared.views.public import PublicAPIView
 
 
 @public_post_schema(
@@ -38,8 +40,7 @@ from shared.services.asset_attachment import serialize_asset_summary
         (status.HTTP_403_FORBIDDEN, "Tenant access denied."),
     ),
 )
-class TenantAuthenticationView(APIView):
-    permission_classes = [AllowAny]
+class TenantAuthenticationView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "tenant_auth"
 
@@ -82,7 +83,10 @@ class TenantAuthenticationView(APIView):
             "schema_name": tokens.tenant.schema_name,
             "domain": tokens.domain,
         }
-        company_logo = serialize_asset_summary(tokens.tenant.get_company_logo_asset())
+        try:
+            company_logo = serialize_asset_summary(tokens.tenant.get_company_logo_asset())
+        except ProgrammingError:
+            company_logo = None
         if company_logo is not None:
             tenant_payload["company_logo"] = company_logo
         return success_response(
@@ -107,8 +111,7 @@ class TenantAuthenticationView(APIView):
         (status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token."),
     ),
 )
-class TokenRefreshView(APIView):
-    permission_classes = [AllowAny]
+class TokenRefreshView(PublicAPIView):
 
     def post(self, request):
         serializer = TokenRefreshSerializer(data=request.data)

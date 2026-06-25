@@ -1,13 +1,12 @@
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.throttling import ScopedRateThrottle
-from rest_framework.views import APIView
 
 from apps.tenancy.openapi import envelope_responses, public_post_schema
 from apps.tenancy.serializers import TenantSelfRegistrationSerializer
 from apps.tenancy.services import TenantRegistrationService
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
+from shared.views.public import PublicAPIView
 
 
 @public_post_schema(
@@ -23,8 +22,7 @@ from shared.responses.error_codes import ErrorCode
         (status.HTTP_400_BAD_REQUEST, "Validation or subdomain conflict error."),
     ),
 )
-class TenantSelfRegistrationView(APIView):
-    permission_classes = [AllowAny]
+class TenantSelfRegistrationView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "tenant_registration"
 

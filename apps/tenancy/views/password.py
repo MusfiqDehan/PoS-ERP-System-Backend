@@ -1,7 +1,5 @@
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.throttling import ScopedRateThrottle
-from rest_framework.views import APIView
 
 from apps.tenancy.openapi import envelope_responses, public_post_schema
 from apps.tenancy.serializers import (
@@ -13,6 +11,7 @@ from apps.tenancy.services import AuthService, InvitationService, PasswordServic
 from apps.tenancy.services.registration import full_domain_for_subdomain
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
+from shared.views.public import PublicAPIView
 
 
 @public_post_schema(
@@ -29,8 +28,7 @@ from shared.responses.error_codes import ErrorCode
         (status.HTTP_403_FORBIDDEN, "Tenant workspace is suspended."),
     ),
 )
-class InvitationValidationView(APIView):
-    permission_classes = [AllowAny]
+class InvitationValidationView(PublicAPIView):
 
     def post(self, request):
         serializer = InvitationTokenSerializer(data=request.data)
@@ -68,8 +66,7 @@ class InvitationValidationView(APIView):
         (status.HTTP_400_BAD_REQUEST, "Invalid token or password validation error."),
     ),
 )
-class PasswordSetupView(APIView):
-    permission_classes = [AllowAny]
+class PasswordSetupView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "tenant_password_setup"
 
@@ -107,8 +104,7 @@ class PasswordSetupView(APIView):
         ),
     ),
 )
-class PasswordResetRequestView(APIView):
-    permission_classes = [AllowAny]
+class PasswordResetRequestView(PublicAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "tenant_password_reset"
 
