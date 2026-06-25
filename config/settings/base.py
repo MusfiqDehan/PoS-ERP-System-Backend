@@ -395,10 +395,6 @@ SPECTACULAR_SETTINGS = {
             "description": "Authenticated tenant-scoped user, branding, and settings operations.",
         },
         {
-            "name": "Tenancy - Platform Admin",
-            "description": "Platform administrator operations for tenant lifecycle and feature overrides.",
-        },
-        {
             "name": "Billing - Public",
             "description": "Unauthenticated payment gateway callbacks and subscription redirect handlers.",
         },
