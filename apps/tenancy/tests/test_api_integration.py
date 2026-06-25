@@ -1,12 +1,27 @@
 """API integration tests for auth and access flows."""
 
+import importlib
+
 import pytest
+from django.contrib.auth import get_user_model
 from django.db import connection
+from django.test import override_settings
 from django_tenants.utils import schema_context
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from apps.access.models import Role, RolePermission, UserRole
+
+User = get_user_model()
+TEST_MIDDLEWARE = importlib.import_module("config.settings.test").MIDDLEWARE
+
+
+@pytest.fixture
+def platform_superadmin(public_schema):
+    return User.objects.create_superadmin(
+        email="platform@test.com",
+        password="TestPass1!",
+    )
 
 
 @pytest.mark.django_db
@@ -97,21 +112,38 @@ def test_access_roles_forbidden_without_permission(tenant, tenant_domain, tenant
 
 
 @pytest.mark.django_db
-def test_platform_admin_tenants_requires_auth(public_schema):
+def test_tenant_user_cannot_access_platform_owner_me(
+    tenant, tenant_domain, tenant_user
+):
+    from django_tenants.utils import schema_context
+
+    with schema_context(tenant.schema_name):
+        refresh = RefreshToken.for_user(tenant_user)
+        refresh["tenant_schema"] = tenant.schema_name
+        access = str(refresh.access_token)
+
     client = APIClient()
-    response = client.get("/api/v1/tenancy/admin/tenants/", HTTP_HOST="localhost")
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+    response = client.get("/api/v1/platform-owner/me/", HTTP_HOST="localhost")
     assert response.status_code in (401, 403)
 
 
 @pytest.mark.django_db
-def test_platform_admin_tenants_superuser(public_schema):
-    from apps.tenancy.models import User
-
-    admin = User.objects.create_superadmin(
-        email="platform@test.com", password="TestPass1!"
-    )
+@override_settings(MIDDLEWARE=TEST_MIDDLEWARE)
+def test_platform_superadmin_cannot_access_tenant_me(
+    tenant, tenant_domain, platform_superadmin
+):
     client = APIClient()
-    client.force_authenticate(user=admin)
-    response = client.get("/api/v1/tenancy/admin/tenants/", HTTP_HOST="localhost")
-    assert response.status_code == 200
-    assert response.data["success"] is True
+    login = client.post(
+        "/api/v1/platform-owner/auth/login/",
+        {"email": "platform@test.com", "password": "TestPass1!"},
+        format="json",
+        HTTP_HOST="localhost",
+    )
+    access = login.data["data"]["access"]
+    response = client.get(
+        "/api/v1/tenancy/me/",
+        HTTP_AUTHORIZATION=f"Bearer {access}",
+        HTTP_HOST="test-tenant.localhost",
+    )
+    assert response.status_code in (401, 403)
