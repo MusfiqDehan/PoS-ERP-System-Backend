@@ -11,6 +11,7 @@ from apps.tenancy.services.invitation import InvitationService
 from apps.tenancy.services.password import PasswordService
 from apps.tenancy.services.platform_permissions import PlatformPermissionService
 from apps.tenancy.services.registration import TenantRegistrationService
+from apps.tenancy.services.tenant_administration import TenantAdministrationService
 
 __all__ = [
     "AuthService",
@@ -19,6 +20,7 @@ __all__ = [
     "PasswordService",
     "PlatformPermissionService",
     "TenantAuditService",
+    "TenantAdministrationService",
     "TenantRegistrationService",
     "get_tenant_enabled_feature_keys",
     "patch_tenant_feature_overrides",
