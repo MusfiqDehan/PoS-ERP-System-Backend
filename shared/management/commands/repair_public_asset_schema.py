@@ -9,15 +9,13 @@ from django_tenants.utils import get_public_schema_name, schema_context
 def public_shared_asset_tables_exist() -> bool:
     with schema_context(get_public_schema_name()):
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT 1
                 FROM information_schema.tables
                 WHERE table_schema = 'public'
                   AND table_name = 'shared_asset'
                 LIMIT 1
-                """
-            )
+                """)
             return cursor.fetchone() is not None
 
 

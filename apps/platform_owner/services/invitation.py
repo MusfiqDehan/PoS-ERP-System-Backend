@@ -20,7 +20,10 @@ User = get_user_model()
 
 
 def _platform_console_subdomain() -> str:
-    return getattr(settings, "PLATFORM_CONSOLE_SUBDOMAIN", "platform").strip() or "platform"
+    return (
+        getattr(settings, "PLATFORM_CONSOLE_SUBDOMAIN", "platform").strip()
+        or "platform"
+    )
 
 
 def _platform_invite_url(raw_token: str) -> str:
@@ -56,14 +59,17 @@ class PlatformInvitationService:
                 raise ValueError("Invalid platform role.")
 
             with transaction.atomic():
-                user = User.objects.filter(email__iexact=email, tenant__isnull=True).first()
+                user = User.objects.filter(
+                    email__iexact=email, tenant__isnull=True
+                ).first()
                 if user is None:
                     user = User(email=email, full_name=full_name or "", tenant=None)
                     user.set_unusable_password()
                     user.save()
-                elif user.password_set_at is not None and PlatformUserRole.objects.filter(
-                    user=user
-                ).exists():
+                elif (
+                    user.password_set_at is not None
+                    and PlatformUserRole.objects.filter(user=user).exists()
+                ):
                     raise ValueError("User already has platform access.")
 
                 pending = Invitation.objects.filter(
@@ -73,7 +79,9 @@ class PlatformInvitationService:
                     expires_at__gt=timezone.now(),
                 ).exists()
                 if pending:
-                    raise ValueError("A pending invitation already exists for this email.")
+                    raise ValueError(
+                        "A pending invitation already exists for this email."
+                    )
 
                 raw_token, invitation = Invitation.issue_token(
                     token_type=Invitation.TOKEN_TYPE_PLATFORM_INVITE,
@@ -128,7 +136,10 @@ class PlatformInvitationService:
 
         with transaction.atomic():
             invitation = Invitation.from_raw_token(raw_token, for_update=True)
-            if invitation is None or invitation.token_type != Invitation.TOKEN_TYPE_PLATFORM_INVITE:
+            if (
+                invitation is None
+                or invitation.token_type != Invitation.TOKEN_TYPE_PLATFORM_INVITE
+            ):
                 raise ValueError("Invalid or expired token.")
             if invitation.used_at is not None:
                 raise ValueError("Invitation already used.")

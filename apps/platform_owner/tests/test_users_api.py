@@ -17,7 +17,9 @@ def test_list_platform_users_queryset(public_schema, platform_superadmin):
 
 
 @pytest.mark.django_db
-def test_replace_roles_blocks_last_superadmin_self_demotion(public_schema, platform_superadmin):
+def test_replace_roles_blocks_last_superadmin_self_demotion(
+    public_schema, platform_superadmin
+):
     with pytest.raises(ValueError, match="last superadmin"):
         PlatformUserService.replace_roles(
             actor=platform_superadmin,
@@ -42,7 +44,9 @@ def test_platform_users_list_and_detail_api(public_schema, platform_auth_client)
 
 
 @pytest.mark.django_db
-def test_deactivate_blocks_last_superadmin(public_schema, platform_superadmin, platform_auth_client):
+def test_deactivate_blocks_last_superadmin(
+    public_schema, platform_superadmin, platform_auth_client
+):
     response = platform_auth_client.post(
         f"/api/v1/platform-owner/users/{platform_superadmin.id}/deactivate/",
         HTTP_HOST="localhost",

@@ -23,7 +23,9 @@ from shared.views import ModelCRUDView
                 "platform.features view permission."
             ),
             "responses": {
-                status.HTTP_200_OK: OpenApiResponse(description="Feature list envelope."),
+                status.HTTP_200_OK: OpenApiResponse(
+                    description="Feature list envelope."
+                ),
             },
         },
         "POST": {
@@ -46,9 +48,7 @@ class PlatformFeatureListCreateView(ModelCRUDView):
 
     def get_permissions(self):
         if self.request.method == "POST":
-            return [
-                IsPlatformFeaturePermission.require("platform.features", "edit")()
-            ]
+            return [IsPlatformFeaturePermission.require("platform.features", "edit")()]
         return [IsPlatformFeaturePermission.require("platform.features", "view")()]
 
     def get_queryset(self):

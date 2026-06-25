@@ -84,7 +84,9 @@ class TenantAuthenticationView(PublicAPIView):
             "domain": tokens.domain,
         }
         try:
-            company_logo = serialize_asset_summary(tokens.tenant.get_company_logo_asset())
+            company_logo = serialize_asset_summary(
+                tokens.tenant.get_company_logo_asset()
+            )
         except ProgrammingError:
             company_logo = None
         if company_logo is not None:

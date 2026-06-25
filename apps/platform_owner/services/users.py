@@ -14,7 +14,9 @@ class PlatformUserService:
     @staticmethod
     def queryset():
         user_ids = PlatformUserRole.objects.values_list("user_id", flat=True).distinct()
-        return User.objects.filter(tenant__isnull=True, id__in=user_ids).order_by("email")
+        return User.objects.filter(tenant__isnull=True, id__in=user_ids).order_by(
+            "email"
+        )
 
     @staticmethod
     def get_platform_user(user_id):
@@ -81,7 +83,10 @@ class PlatformUserService:
         is_superadmin = PlatformUserRole.objects.filter(
             user=user, role__slug="superadmin"
         ).exists()
-        if is_superadmin and cls._count_active_superadmins(exclude_user_id=user.id) == 0:
+        if (
+            is_superadmin
+            and cls._count_active_superadmins(exclude_user_id=user.id) == 0
+        ):
             raise ValueError("Cannot deactivate the last active superadmin.")
 
         user.is_active = False

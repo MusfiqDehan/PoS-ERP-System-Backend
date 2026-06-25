@@ -124,9 +124,7 @@ def build_platform_owner_folder() -> dict[str, Any]:
                 "password. Returns JWT access and refresh tokens with platform_user=true. "
                 "Invite-only — no self-registration. Rate limited."
             ),
-            body=_json_body(
-                {"email": "platform@test.com", "password": "TestPass1!"}
-            ),
+            body=_json_body({"email": "platform@test.com", "password": "TestPass1!"}),
             event=_save_platform_tokens_script(),
         ),
         _request(
@@ -209,9 +207,7 @@ def build_platform_owner_folder() -> dict[str, Any]:
                 "Validates a platform_invite token on the public schema and returns "
                 "invitation metadata without re-exposing the raw token."
             ),
-            body=_json_body(
-                {"token": "paste-platform-invitation-token-here"}
-            ),
+            body=_json_body({"token": "paste-platform-invitation-token-here"}),
         ),
         _request(
             name="Accept a platform invitation",
@@ -497,7 +493,9 @@ def postman_request(
 ) -> dict[str, Any]:
     api_key = os.environ.get("POSTMAN_API_KEY", "").strip()
     if not api_key:
-        raise RuntimeError("POSTMAN_API_KEY is not set; use --push only after configuring it.")
+        raise RuntimeError(
+            "POSTMAN_API_KEY is not set; use --push only after configuring it."
+        )
 
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(

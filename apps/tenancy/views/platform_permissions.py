@@ -26,6 +26,10 @@ class PlatformPermissionsAliasView(APIView):
 
     def get(self, request):
         return success_response(
-            data={"permissions": PlatformPermissionService.get_permission_map(request.user)},
+            data={
+                "permissions": PlatformPermissionService.get_permission_map(
+                    request.user
+                )
+            },
             message="Permissions retrieved.",
         )

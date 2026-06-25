@@ -4,7 +4,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.platform_owner.openapi import PLATFORM_OWNER_TAG, envelope_responses, public_post_schema
+from apps.platform_owner.openapi import (
+    PLATFORM_OWNER_TAG,
+    envelope_responses,
+    public_post_schema,
+)
 from apps.platform_owner.serializers import (
     PlatformInvitationAcceptSerializer,
     PlatformInvitationCreateSerializer,
@@ -124,7 +128,9 @@ class PlatformInvitationRevokeView(ModelCRUDView):
 
     def get_queryset(self):
         with schema_context(get_public_schema_name()):
-            return PlatformInvitationService.list_queryset().filter(used_at__isnull=True)
+            return PlatformInvitationService.list_queryset().filter(
+                used_at__isnull=True
+            )
 
     def delete(self, request, invitation_id, **kwargs):
         try:

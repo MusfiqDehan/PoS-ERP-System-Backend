@@ -6,7 +6,9 @@ from apps.tenancy.models import Feature
 class PlatformFeatureService:
     @staticmethod
     def list_features():
-        return Feature.objects.all().select_related("parent").order_by("sort_order", "key")
+        return (
+            Feature.objects.all().select_related("parent").order_by("sort_order", "key")
+        )
 
     @staticmethod
     def create_feature(*, data: dict) -> Feature:
@@ -25,7 +27,9 @@ class PlatformFeatureService:
         if feature.is_system:
             blocked = {"key", "scope", "is_system"}
             if blocked.intersection(data.keys()):
-                raise ValueError("Cannot change key, scope, or is_system on system features.")
+                raise ValueError(
+                    "Cannot change key, scope, or is_system on system features."
+                )
         parent_key = data.pop("parent_key", None)
         if parent_key is not None:
             if parent_key == "":

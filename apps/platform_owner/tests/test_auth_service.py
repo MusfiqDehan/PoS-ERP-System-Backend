@@ -10,7 +10,9 @@ User = get_user_model()
 
 
 @pytest.mark.django_db
-def test_platform_login_token_has_platform_user_claim(public_schema, platform_superadmin):
+def test_platform_login_token_has_platform_user_claim(
+    public_schema, platform_superadmin
+):
     tokens = PlatformAuthService.login(
         email="platform@test.com",
         password="TestPass1!",

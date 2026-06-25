@@ -4,7 +4,9 @@ from apps.tenancy.models import Feature
 
 
 class PlatformFeatureSerializer(serializers.ModelSerializer):
-    parent_key = serializers.SlugField(required=False, allow_null=True, allow_blank=True)
+    parent_key = serializers.SlugField(
+        required=False, allow_null=True, allow_blank=True
+    )
 
     class Meta:
         model = Feature

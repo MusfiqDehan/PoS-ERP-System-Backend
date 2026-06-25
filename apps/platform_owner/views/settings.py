@@ -44,9 +44,7 @@ class PlatformSettingsView(ModelCRUDView):
 
     def get_permissions(self):
         if self.request.method == "PATCH":
-            return [
-                IsPlatformFeaturePermission.require("platform.settings", "edit")()
-            ]
+            return [IsPlatformFeaturePermission.require("platform.settings", "edit")()]
         return [IsPlatformFeaturePermission.require("platform.settings", "view")()]
 
     def get_object(self):

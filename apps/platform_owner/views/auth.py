@@ -2,7 +2,11 @@ from rest_framework import status
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from apps.platform_owner.openapi import PLATFORM_OWNER_TAG, envelope_responses, public_post_schema
+from apps.platform_owner.openapi import (
+    PLATFORM_OWNER_TAG,
+    envelope_responses,
+    public_post_schema,
+)
 from apps.platform_owner.permissions import IsPlatformUser
 from apps.platform_owner.serializers import (
     PlatformAuthSerializer,
@@ -105,7 +109,9 @@ class PlatformTokenRefreshView(PublicAPIView):
         "Requires a platform JWT (platform_user claim). Invite-only; no registration."
     ),
     responses={
-        status.HTTP_200_OK: OpenApiResponse(description="Platform user profile envelope."),
+        status.HTTP_200_OK: OpenApiResponse(
+            description="Platform user profile envelope."
+        ),
     },
 )
 class PlatformMeView(APIView):
@@ -134,7 +140,11 @@ class PlatformPermissionsView(APIView):
 
     def get(self, request):
         return success_response(
-            data={"permissions": PlatformPermissionService.get_permission_map(request.user)},
+            data={
+                "permissions": PlatformPermissionService.get_permission_map(
+                    request.user
+                )
+            },
             message="Permissions retrieved.",
         )
 

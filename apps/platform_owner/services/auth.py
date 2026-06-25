@@ -45,14 +45,10 @@ class PlatformAuthService:
         with schema_context(get_public_schema_name()):
             user = User.objects.filter(email__iexact=email, tenant__isnull=True).first()
             if user is None or not user.check_password(password):
-                cache.set(
-                    cache_key, failed_attempts + 1, timeout=cls.LOCKOUT_SECONDS
-                )
+                cache.set(cache_key, failed_attempts + 1, timeout=cls.LOCKOUT_SECONDS)
                 raise ValueError("Invalid credentials.")
             if user.password_set_at is None:
-                cache.set(
-                    cache_key, failed_attempts + 1, timeout=cls.LOCKOUT_SECONDS
-                )
+                cache.set(cache_key, failed_attempts + 1, timeout=cls.LOCKOUT_SECONDS)
                 raise ValueError("Invalid credentials.")
             if not user.is_active or user.is_deleted:
                 raise PermissionError("User account is inactive.")

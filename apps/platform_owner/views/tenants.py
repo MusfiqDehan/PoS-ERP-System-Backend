@@ -98,9 +98,7 @@ class PlatformTenantFeatureOverrideView(APIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [
-                IsPlatformFeaturePermission.require("platform.tenants", "view")()
-            ]
+            return [IsPlatformFeaturePermission.require("platform.tenants", "view")()]
         return [perm() for perm in self.permission_classes]
 
     def get(self, request, tenant_id):
