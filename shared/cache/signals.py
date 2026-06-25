@@ -7,13 +7,9 @@ from django.dispatch import receiver
 from shared.cache.helpers import (
     bump_tenant_access_me_version,
     invalidate_domain_schema,
-    invalidate_notification_count,
     invalidate_platform_settings,
     invalidate_public_branches,
-    invalidate_public_branding,
     invalidate_public_packages,
-    invalidate_public_pricing_config,
-    invalidate_tenant_admin_notification_counts,
     invalidate_tenant_overview,
     invalidate_timezone,
     invalidate_platform_user_permissions,
@@ -31,11 +27,6 @@ def invalidate_public_packages_on_package_change(sender, **kwargs):
 @receiver(post_delete, sender="billing.PackageFeature")
 def invalidate_public_packages_on_package_feature_change(sender, **kwargs):
     invalidate_public_packages()
-
-
-@receiver(post_save, sender="tenancy.PlatformPricingConfig")
-def invalidate_public_pricing_on_config_change(sender, **kwargs):
-    invalidate_public_pricing_config()
 
 
 @receiver(post_save, sender="tenancy.PlatformSettings")
@@ -89,36 +80,6 @@ def invalidate_public_branches_on_branch_change(sender, **kwargs):
     schema_name = connection.schema_name
     if schema_name and schema_name != "public":
         invalidate_public_branches(schema_name)
-
-
-@receiver(post_save, sender="dashboard.GymProfile")
-def invalidate_gym_profile_cache(sender, **kwargs):
-    schema_name = connection.schema_name
-    if schema_name and schema_name != "public":
-        invalidate_public_branding(schema_name)
-        invalidate_timezone(schema_name)
-
-
-@receiver(post_save, sender="reminder.Notification")
-@receiver(post_delete, sender="reminder.Notification")
-def invalidate_notification_count_on_notification_change(sender, instance, **kwargs):
-    schema_name = connection.schema_name
-    if not schema_name or schema_name == "public":
-        return
-    recipient_id = getattr(instance, "recipient_id", None)
-    if recipient_id:
-        invalidate_notification_count(schema_name, recipient_id)
-        return
-    invalidate_tenant_admin_notification_counts(schema_name)
-
-
-@receiver(post_save, sender="reminder.NotificationRead")
-def invalidate_notification_count_on_read(sender, instance, **kwargs):
-    schema_name = connection.schema_name
-    if not schema_name or schema_name == "public":
-        return
-    if instance.user_id:
-        invalidate_notification_count(schema_name, instance.user_id)
 
 
 @receiver(post_save, sender="access.UserRole")

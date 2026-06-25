@@ -16,14 +16,11 @@ PLATFORM_PERMISSION_TTL = 600
 TIMEZONE_TTL = 900
 DOMAIN_TTL = 3600
 PUBLIC_PACKAGE_TTL = 1800
-PUBLIC_PRICING_CONFIG_TTL = 1800
 PUBLIC_BRANCH_TTL = 600
-PUBLIC_BRANDING_TTL = 900
 PLATFORM_SETTINGS_TTL = 900
 ACCESS_ME_TTL = 120
 STATS_TTL = 60
 TENANT_OVERVIEW_TTL = 120
-NOTIFICATION_COUNT_TTL = 30
 
 
 def tenant_feature_key(tenant_id) -> str:
@@ -50,10 +47,6 @@ def public_packages_key() -> str:
     return "public:packages:v1"
 
 
-def public_pricing_config_key() -> str:
-    return "public:pricing_config:v1"
-
-
 def public_branches_key(
     schema_name: str,
     *,
@@ -64,10 +57,6 @@ def public_branches_key(
     if homepage:
         suffix = f"{suffix}:homepage"
     return f"tenant:{schema_name}:branches:{suffix}"
-
-
-def public_branding_key(schema_name: str) -> str:
-    return f"tenant:{schema_name}:branding:v1"
 
 
 def platform_settings_key() -> str:
@@ -116,10 +105,6 @@ def tenant_overview_key() -> str:
     return "platform:tenant_overview:v1"
 
 
-def notification_count_key(schema_name: str, user_id) -> str:
-    return f"notif:count:{schema_name}:{user_id}"
-
-
 def get_cached_value(key: str, ttl: int, factory: Callable[[], T]) -> T:
     """Return cached value or compute, store, and return."""
     cached = cache.get(key)
@@ -143,26 +128,9 @@ def invalidate_tenant_features(tenant_id) -> None:
         bump_tenant_access_me_version(schema_name)
 
 
-def invalidate_notification_count(schema_name: str, user_id) -> None:
-    cache.delete(notification_count_key(schema_name, user_id))
-
-
-def invalidate_tenant_admin_notification_counts(schema_name: str) -> None:
-    from apps.access.models import UserRole
-    from django_tenants.utils import schema_context
-
-    with schema_context(schema_name):
-        admin_ids = UserRole.objects.filter(role__slug="admin").values_list(
-            "user_id", flat=True
-        )
-    for user_id in admin_ids:
-        invalidate_notification_count(schema_name, user_id)
-
-
 def invalidate_user_permissions(schema_name: str, user_id) -> None:
     cache.delete(permission_map_key(schema_name, user_id))
     cache.delete(access_me_key(schema_name, user_id))
-    invalidate_notification_count(schema_name, user_id)
 
 
 def invalidate_role_permissions(schema_name: str, role_id: int) -> None:
@@ -209,16 +177,8 @@ def invalidate_public_branches(schema_name: str) -> None:
             )
 
 
-def invalidate_public_branding(schema_name: str) -> None:
-    cache.delete(public_branding_key(schema_name))
-
-
 def invalidate_public_packages() -> None:
     cache.delete(public_packages_key())
-
-
-def invalidate_public_pricing_config() -> None:
-    cache.delete(public_pricing_config_key())
 
 
 def invalidate_platform_settings() -> None:
