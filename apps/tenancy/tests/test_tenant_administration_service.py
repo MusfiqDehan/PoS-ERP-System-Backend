@@ -18,7 +18,9 @@ def test_list_tenants_queryset_orders_by_name(tenant, public_schema):
         status="active",
     )
     names = list(
-        TenantAdministrationService.list_tenants_queryset().values_list("name", flat=True)
+        TenantAdministrationService.list_tenants_queryset().values_list(
+            "name", flat=True
+        )
     )
     assert "Alpha Tenant" in names
     assert "Test Tenant" in names
