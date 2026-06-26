@@ -7,6 +7,7 @@ from django_tenants.utils import get_public_schema_name, schema_context
 from rest_framework import serializers
 
 from apps.tenancy.models import Domain, Invitation
+from apps.billing.services.public_catalog import public_package_slugs
 from apps.tenancy.services.registration import (
     full_domain_for_subdomain,
     normalize_subdomain,
@@ -24,9 +25,6 @@ class TenantSelfRegistrationSerializer(serializers.Serializer):
     )
     contact_phone = serializers.CharField(
         max_length=30, required=False, allow_blank=True
-    )
-    plan = serializers.CharField(
-        max_length=50, required=False, allow_blank=True, default="free"
     )
 
     def validate_subdomain(self, value):
@@ -62,3 +60,17 @@ class TenantSelfRegistrationSerializer(serializers.Serializer):
         except DjangoValidationError:
             raise serializers.ValidationError("Enter a valid email address.")
         return value.lower().strip()
+
+    plan = serializers.CharField(
+        max_length=50, required=False, allow_blank=True, default="free"
+    )
+
+    def validate(self, attrs):
+        plan = (attrs.get("plan") or "").strip().lower() or "free"
+        allowed = public_package_slugs()
+        if plan not in allowed:
+            raise serializers.ValidationError(
+                {"plan": ["Select a valid subscription plan."]}
+            )
+        attrs["plan"] = plan
+        return attrs
