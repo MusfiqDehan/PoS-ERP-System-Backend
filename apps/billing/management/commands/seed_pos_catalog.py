@@ -35,7 +35,38 @@ STARTER_FEATURE_KEYS = TRIAL_FEATURE_KEYS + [
     "permissions",
 ]
 
-PACKAGE_DEFAULTS = {
+PACKAGE_TIERS = {
+    "free": {
+        "name": "Free",
+        "description": "14-day trial with core PoS features.",
+        "price_monthly": Decimal("0"),
+        "price_yearly": Decimal("0"),
+        "is_trial": True,
+        "max_branches": 1,
+        "max_users": 5,
+        "max_custom_roles": 0,
+        "max_admins": 1,
+        "max_staff": 5,
+        "sort_order": 1,
+        "feature_keys": TRIAL_FEATURE_KEYS,
+        "role_limits": {"cashier": 3},
+    },
+    "pro": {
+        "name": "Pro",
+        "description": "Essential PoS for growing retail teams.",
+        "price_monthly": Decimal("29.00"),
+        "price_yearly": Decimal("290.00"),
+        "is_trial": False,
+        "max_branches": 3,
+        "max_users": 25,
+        "max_custom_roles": 3,
+        "max_admins": 2,
+        "max_staff": 20,
+        "sort_order": 2,
+        "feature_keys": STARTER_FEATURE_KEYS,
+        "role_limits": {"cashier": 10, "manager": 2},
+    },
+    # Legacy slugs kept for existing subscriptions and tests.
     "trial": {
         "name": "Free Trial",
         "description": "14-day trial with core PoS features.",
@@ -47,7 +78,9 @@ PACKAGE_DEFAULTS = {
         "max_custom_roles": 0,
         "max_admins": 1,
         "max_staff": 5,
-        "sort_order": 1,
+        "sort_order": 3,
+        "feature_keys": TRIAL_FEATURE_KEYS,
+        "role_limits": {"cashier": 3},
     },
     "starter": {
         "name": "Starter",
@@ -60,13 +93,18 @@ PACKAGE_DEFAULTS = {
         "max_custom_roles": 3,
         "max_admins": 2,
         "max_staff": 20,
-        "sort_order": 2,
+        "sort_order": 4,
+        "feature_keys": STARTER_FEATURE_KEYS,
+        "role_limits": {"cashier": 10, "manager": 2},
     },
 }
 
 
 class Command(BaseCommand):
-    help = "Seed Sortorium PoS software product, trial/starter packages, and SSLCommerz gateway."
+    help = (
+        "Seed Sortorium PoS product, public packages (free, pro, trial, starter), "
+        "and SSLCommerz gateway."
+    )
 
     def handle(self, *args, **options):
         with schema_context(get_public_schema_name()), transaction.atomic():
@@ -88,19 +126,23 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Product: {product.slug}"))
 
             features = {f.key: f for f in Feature.objects.all()}
-            for slug, defaults in PACKAGE_DEFAULTS.items():
-                keys = TRIAL_FEATURE_KEYS if slug == "trial" else STARTER_FEATURE_KEYS
+            for slug, tier in PACKAGE_TIERS.items():
+                package_fields = {
+                    k: v
+                    for k, v in tier.items()
+                    if k not in {"feature_keys", "role_limits"}
+                }
                 package, created = Package.objects.update_or_create(
                     slug=slug,
                     defaults={
-                        **defaults,
+                        **package_fields,
                         "software_product": product,
                         "is_public": True,
                         "is_active": True,
                     },
                 )
-                self._sync_package_features(package, keys, features)
-                self._sync_role_limits(package, slug)
+                self._sync_package_features(package, tier["feature_keys"], features)
+                self._sync_role_limits(package, tier["role_limits"])
                 verb = "Created" if created else "Updated"
                 self.stdout.write(f"  {verb} package '{slug}'")
 
@@ -139,8 +181,7 @@ class Command(BaseCommand):
             if feature_id not in wanted_ids:
                 pf.delete()
 
-    def _sync_role_limits(self, package, slug):
-        limits = {"cashier": 3} if slug == "trial" else {"cashier": 10, "manager": 2}
+    def _sync_role_limits(self, package, limits):
         existing = {rl.role_slug: rl for rl in package.role_limits.all()}
         for role_slug, max_users in limits.items():
             rl = existing.get(role_slug)
