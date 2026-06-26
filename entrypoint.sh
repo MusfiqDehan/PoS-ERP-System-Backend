@@ -42,6 +42,9 @@ python manage.py repair_public_asset_schema
 echo "Syncing feature registry..."
 python manage.py sync_features || true
 
+echo "Seeding public billing packages..."
+python manage.py seed_pos_catalog || true
+
 echo "Seeding platform roles..."
 python manage.py seed_platform_roles || true
 
