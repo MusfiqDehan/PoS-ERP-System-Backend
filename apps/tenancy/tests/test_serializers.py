@@ -38,9 +38,7 @@ def test_registration_rejects_short_subdomain():
 def test_registration_rejects_invalid_plan(public_schema):
     from apps.billing.models import Package, SoftwareProduct
 
-    product = SoftwareProduct.objects.create(
-        name="Sortorium PoS", slug="sortorium-pos"
-    )
+    product = SoftwareProduct.objects.create(name="Sortorium PoS", slug="sortorium-pos")
     Package.objects.create(
         software_product=product,
         name="Free",
@@ -69,9 +67,7 @@ def test_role_serializer_requires_name():
 def test_registration_accepts_valid_payload(public_schema):
     from apps.billing.models import Package, SoftwareProduct
 
-    product = SoftwareProduct.objects.create(
-        name="Sortorium PoS", slug="sortorium-pos"
-    )
+    product = SoftwareProduct.objects.create(name="Sortorium PoS", slug="sortorium-pos")
     Package.objects.create(
         software_product=product,
         name="Free",
