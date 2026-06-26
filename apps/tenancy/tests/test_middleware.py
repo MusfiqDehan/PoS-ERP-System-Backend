@@ -121,9 +121,7 @@ def test_tenant_me_rejects_platform_jwt(tenant, tenant_domain, platform_superadm
 
 @pytest.mark.django_db
 @override_settings(MIDDLEWARE=TEST_MIDDLEWARE)
-def test_jwt_tenant_schema_routes_hostless_client(
-    tenant, tenant_domain, tenant_user
-):
+def test_jwt_tenant_schema_routes_hostless_client(tenant, tenant_domain, tenant_user):
     client = APIClient()
     login = client.post(
         "/api/v1/tenancy/auth/login/",
@@ -151,9 +149,7 @@ def test_jwt_tenant_schema_routes_hostless_client(
 
 @pytest.mark.django_db
 @override_settings(MIDDLEWARE=TEST_MIDDLEWARE)
-def test_x_tenant_subdomain_header_resolves_tenant(
-    tenant, tenant_domain, tenant_user
-):
+def test_x_tenant_subdomain_header_resolves_tenant(tenant, tenant_domain, tenant_user):
     from django_tenants.utils import schema_context
 
     with schema_context(tenant.schema_name):
