@@ -37,37 +37,6 @@ STARTER_FEATURE_KEYS = TRIAL_FEATURE_KEYS + [
 
 PACKAGE_TIERS = {
     "free": {
-        "name": "Free",
-        "description": "14-day trial with core PoS features.",
-        "price_monthly": Decimal("0"),
-        "price_yearly": Decimal("0"),
-        "is_trial": True,
-        "max_branches": 1,
-        "max_users": 5,
-        "max_custom_roles": 0,
-        "max_admins": 1,
-        "max_staff": 5,
-        "sort_order": 1,
-        "feature_keys": TRIAL_FEATURE_KEYS,
-        "role_limits": {"cashier": 3},
-    },
-    "pro": {
-        "name": "Pro",
-        "description": "Essential PoS for growing retail teams.",
-        "price_monthly": Decimal("29.00"),
-        "price_yearly": Decimal("290.00"),
-        "is_trial": False,
-        "max_branches": 3,
-        "max_users": 25,
-        "max_custom_roles": 3,
-        "max_admins": 2,
-        "max_staff": 20,
-        "sort_order": 2,
-        "feature_keys": STARTER_FEATURE_KEYS,
-        "role_limits": {"cashier": 10, "manager": 2},
-    },
-    # Legacy slugs kept for existing subscriptions and tests.
-    "trial": {
         "name": "Free Trial",
         "description": "14-day trial with core PoS features.",
         "price_monthly": Decimal("0"),
@@ -78,7 +47,7 @@ PACKAGE_TIERS = {
         "max_custom_roles": 0,
         "max_admins": 1,
         "max_staff": 5,
-        "sort_order": 3,
+        "sort_order": 1,
         "feature_keys": TRIAL_FEATURE_KEYS,
         "role_limits": {"cashier": 3},
     },
@@ -97,6 +66,21 @@ PACKAGE_TIERS = {
         "feature_keys": STARTER_FEATURE_KEYS,
         "role_limits": {"cashier": 10, "manager": 2},
     },
+    "pro": {
+        "name": "Pro",
+        "description": "Essential PoS for growing retail teams.",
+        "price_monthly": Decimal("39.00"),
+        "price_yearly": Decimal("390.00"),
+        "is_trial": False,
+        "max_branches": 3,
+        "max_users": 25,
+        "max_custom_roles": 3,
+        "max_admins": 2,
+        "max_staff": 20,
+        "sort_order": 2,
+        "feature_keys": STARTER_FEATURE_KEYS,
+        "role_limits": {"cashier": 10, "manager": 2},
+    }
 }
 
 
