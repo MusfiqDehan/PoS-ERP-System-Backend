@@ -65,7 +65,9 @@ def test_platform_tenant_feature_overrides_patch(
 
 
 @pytest.mark.django_db
-def test_platform_tenant_feature_overrides_not_found(public_schema, platform_auth_client):
+def test_platform_tenant_feature_overrides_not_found(
+    public_schema, platform_auth_client
+):
     import uuid
 
     response = platform_auth_client.get(
