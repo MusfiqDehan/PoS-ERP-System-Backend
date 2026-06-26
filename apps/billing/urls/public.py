@@ -7,6 +7,7 @@ from apps.billing.views.catalog import (
     SoftwareProductDetailView,
     SoftwareProductListCreateView,
 )
+from apps.billing.views.public_catalog import PublicPackageListView
 from apps.billing.views.gateways import (
     PaymentGatewayDetailView,
     PaymentGatewayListCreateView,
@@ -28,6 +29,11 @@ from apps.billing.views.subscriptions import (
 app_name = "billing"
 
 urlpatterns = [
+    path(
+        "public/packages/",
+        PublicPackageListView.as_view(),
+        name="public-package-list",
+    ),
     path("products/", SoftwareProductListCreateView.as_view(), name="product-list"),
     path(
         "products/<uuid:pk>/",
