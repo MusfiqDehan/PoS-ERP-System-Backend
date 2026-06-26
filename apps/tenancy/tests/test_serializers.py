@@ -34,6 +34,31 @@ def test_registration_rejects_short_subdomain():
     assert serializer.is_valid() is False
 
 
+@pytest.mark.django_db
+def test_registration_rejects_invalid_plan(public_schema):
+    from apps.billing.models import Package, SoftwareProduct
+
+    product = SoftwareProduct.objects.create(
+        name="Sortorium PoS", slug="sortorium-pos"
+    )
+    Package.objects.create(
+        software_product=product,
+        name="Free",
+        slug="free",
+        is_public=True,
+    )
+    serializer = TenantSelfRegistrationSerializer(
+        data={
+            "subdomain": "newco",
+            "company_name": "New Co",
+            "admin_email": "owner@newco.com",
+            "plan": "invalid-plan",
+        }
+    )
+    assert serializer.is_valid() is False
+    assert "plan" in serializer.errors
+
+
 def test_role_serializer_requires_name():
     serializer = RoleSerializer(data={})
     assert serializer.is_valid() is False
@@ -42,6 +67,17 @@ def test_role_serializer_requires_name():
 
 @pytest.mark.django_db
 def test_registration_accepts_valid_payload(public_schema):
+    from apps.billing.models import Package, SoftwareProduct
+
+    product = SoftwareProduct.objects.create(
+        name="Sortorium PoS", slug="sortorium-pos"
+    )
+    Package.objects.create(
+        software_product=product,
+        name="Free",
+        slug="free",
+        is_public=True,
+    )
     request = APIRequestFactory().post("/api/v1/tenancy/register/")
     serializer = TenantSelfRegistrationSerializer(
         data={
