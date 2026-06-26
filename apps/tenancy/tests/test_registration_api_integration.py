@@ -13,9 +13,7 @@ from apps.tenancy.models import EmailQueue, Feature, Invitation, Tenant
 
 @pytest.fixture
 def seeded_public_packages(public_schema):
-    product = SoftwareProduct.objects.create(
-        name="Sortorium PoS", slug="sortorium-pos"
-    )
+    product = SoftwareProduct.objects.create(name="Sortorium PoS", slug="sortorium-pos")
     free = Package.objects.create(
         software_product=product,
         name="Free",
