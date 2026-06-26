@@ -80,7 +80,7 @@ PACKAGE_TIERS = {
         "sort_order": 2,
         "feature_keys": STARTER_FEATURE_KEYS,
         "role_limits": {"cashier": 10, "manager": 2},
-    }
+    },
 }
 
 
