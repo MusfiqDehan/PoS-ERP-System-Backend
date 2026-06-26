@@ -53,9 +53,7 @@ def public_packages(public_product, public_schema):
 @pytest.mark.django_db
 def test_public_packages_list_no_auth(public_schema, public_packages):
     client = APIClient()
-    response = client.get(
-        "/api/v1/billing/public/packages/", HTTP_HOST="localhost"
-    )
+    response = client.get("/api/v1/billing/public/packages/", HTTP_HOST="localhost")
     assert response.status_code == 200
     assert response.data["success"] is True
     items = response.data["data"]["items"]
@@ -77,9 +75,7 @@ def test_public_packages_excludes_inactive(public_schema, public_product):
         is_active=False,
     )
     client = APIClient()
-    response = client.get(
-        "/api/v1/billing/public/packages/", HTTP_HOST="localhost"
-    )
+    response = client.get("/api/v1/billing/public/packages/", HTTP_HOST="localhost")
     assert response.status_code == 200
     assert response.data["data"]["items"] == []
 
