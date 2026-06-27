@@ -23,9 +23,13 @@ Configure in **Settings → Secrets and variables → Actions**:
 | `VPS_HOST` | `203.0.113.10` | VPS IP or hostname |
 | `VPS_USER` | `deploy` | SSH user |
 | `VPS_SSH_KEY` | ed25519 private key | SSH authentication |
-| `VPS_DEPLOY_PATH` | `/opt/sortorium/backend` | Git clone path on VPS |
+| `VPS_DEPLOY_PATH` | `/opt/sortorium/backend` | Deploy directory on VPS (plain folder; not a git working copy) |
 
-The VPS clone must track `origin/production`. `.env.prod` and `.env.pgbouncer.prod` live only on the server and are never overwritten by the pipeline.
+CI **rsyncs** the GitHub checkout to `VPS_DEPLOY_PATH` (the VPS does not `git pull`). `.env.prod` and `.env.pgbouncer.prod` live only on the server and are never overwritten. After each deploy, `.deploy-revision` records the deployed commit SHA.
+
+### Why not git on the VPS?
+
+If the deploy path was originally `git clone`d, rsync updates files on disk but **excludes `.git/`**, so `git status` compares new files against an old `HEAD` and shows thousands of phantom changes. The deploy script removes any leftover `.git` directory on each run. **Do not run `git pull` on the server** — use GitHub Actions or re-run the workflow.
 
 ## VPS prerequisites
 
@@ -60,8 +64,9 @@ The VPS clone must track `origin/production`. `.env.prod` and `.env.pgbouncer.pr
 
 ```bash
 cd /opt/sortorium/backend   # VPS_DEPLOY_PATH
-git fetch origin production && git reset --hard origin/production
-IMAGE_TAG=<sha> ./scripts/deploy/production.sh
+# Re-run the GitHub Actions workflow, or rsync from a local checkout.
+# Check deployed SHA:
+cat .deploy-revision
 ```
 
 ## Migration compatibility (zero downtime)
@@ -75,12 +80,7 @@ Breaking migrations require a planned maintenance window.
 
 ## Rollback
 
-Re-deploy a previous commit:
-
-```bash
-git reset --hard <previous-sha>
-IMAGE_TAG=<previous-sha> ./scripts/deploy/production.sh
-```
+Re-run the GitHub Actions workflow on an older commit on `production`, or use **workflow_dispatch** after resetting the branch. The deploy path is rsync-managed — do not use `git reset` on the server.
 
 If a deploy failed before live drain, the previous container may still be running — verify with `docker ps`.
 
