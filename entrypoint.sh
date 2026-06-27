@@ -23,6 +23,10 @@ if [ "${SKIP_DB_BOOTSTRAP:-0}" = "1" ]; then
         python manage.py sync_features || true
         echo "Seeding public billing packages..."
         python manage.py seed_pos_catalog || true
+        echo "Seeding platform roles..."
+        python manage.py seed_platform_roles || true
+        echo "Ensuring superadmin account exists..."
+        python manage.py create_superadmin || true
     else
         echo "Skipping DB bootstrap/migrations (SKIP_DB_BOOTSTRAP=1)."
     fi
