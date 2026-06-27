@@ -2,6 +2,7 @@
 .venv/
 .env
 .env.*
+.deploy-revision
 !.env.example
 !.env.local.celery.example
 !.env.pgbouncer.prod.example
