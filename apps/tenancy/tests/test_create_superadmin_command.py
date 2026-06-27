@@ -92,6 +92,36 @@ def test_create_superadmin_idempotent_does_not_break_platform_user(
 
 
 @pytest.mark.django_db
+def test_create_superadmin_repairs_platform_user_without_password_set_at(
+    public_schema, superadmin_env
+):
+    with schema_context(get_public_schema_name()):
+        user = User.objects.create_user(
+            email=BOOTSTRAP_EMAIL,
+            password="StalePass1!",
+        )
+        user.password_set_at = None
+        user.save(update_fields=["password_set_at"])
+
+    call_command("create_superadmin")
+
+    with schema_context(get_public_schema_name()):
+        user.refresh_from_db()
+        assert user.tenant_id is None
+        assert user.password_set_at is not None
+        assert user.check_password(BOOTSTRAP_PASSWORD)
+        assert PlatformUserRole.objects.filter(
+            user=user, role__slug="superadmin"
+        ).exists()
+
+    tokens = PlatformAuthService.login(
+        email=BOOTSTRAP_EMAIL,
+        password=BOOTSTRAP_PASSWORD,
+    )
+    assert tokens.access
+
+
+@pytest.mark.django_db
 def test_create_superadmin_ignores_public_tenant_row_for_user_fk(
     public_schema, superadmin_env
 ):

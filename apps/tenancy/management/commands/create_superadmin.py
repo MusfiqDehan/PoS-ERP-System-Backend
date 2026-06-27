@@ -2,6 +2,7 @@ import os
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from apps.tenancy.models import Tenant
@@ -13,6 +14,8 @@ def ensure_superadmin(user_model, email, password, stdout, *, tenant_fk=None):
     ``tenant_fk`` is the optional User.tenant FK for tenant-scoped admins only.
     Platform owners on the public schema must keep tenant_fk=None.
     """
+    from apps.tenancy.models import PlatformUserRole
+
     user = user_model.objects.filter(email__iexact=email).first()
     if user:
         if tenant_fk is not None and user.tenant_id is None:
@@ -20,6 +23,37 @@ def ensure_superadmin(user_model, email, password, stdout, *, tenant_fk=None):
             user.save(update_fields=["tenant"])
             stdout.write(f"Linked existing superadmin to tenant: {email}")
             return
+
+        if tenant_fk is None and user.tenant_id is None:
+            repaired_fields: list[str] = []
+            if user.password_set_at is None:
+                user.set_password(password)
+                user.password_set_at = timezone.now()
+                repaired_fields.extend(["password", "password_set_at"])
+            if not user.email_verified:
+                user.email_verified = True
+                repaired_fields.append("email_verified")
+            if repaired_fields:
+                user.save(update_fields=repaired_fields)
+
+            from apps.tenancy.models.platform_rbac import PlatformRole
+
+            superadmin_role, _ = PlatformRole.objects.get_or_create(
+                slug="superadmin",
+                defaults={
+                    "name": "Superadmin",
+                    "description": "Full platform-wide access.",
+                    "is_system": True,
+                },
+            )
+            _, role_created = PlatformUserRole.objects.get_or_create(
+                user=user,
+                role=superadmin_role,
+            )
+            if repaired_fields or role_created:
+                stdout.write(f"Repaired bootstrap superadmin: {email}")
+                return
+
         stdout.write(f"Superadmin already exists: {email}")
         return
     user_model.objects.create_superadmin(
