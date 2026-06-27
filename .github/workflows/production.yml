@@ -84,12 +84,19 @@ jobs:
           RSYNC_RSH="ssh ${SSH_OPTS}"
 
           # Push checkout to VPS over SSH (VPS cannot git-fetch private HTTPS remotes).
+          # Do not use git on the server for deploy sync — rsync is the source of truth.
+          # Excludes: server-only secrets, local venvs, and paths that must survive --delete.
           rsync -az --delete \
             --exclude '.git/' \
+            --exclude '.deploy-revision' \
             --exclude '.venv/' \
             --exclude '.venv*/' \
             --exclude 'venv/' \
             --exclude '__pycache__/' \
+            --exclude '.pytest_cache/' \
+            --exclude '.mypy_cache/' \
+            --exclude 'staticfiles/' \
+            --exclude 'media/' \
             --exclude '.env.prod' \
             --exclude '.env.pgbouncer.prod' \
             -e "${RSYNC_RSH}" \
