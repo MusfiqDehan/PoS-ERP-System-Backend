@@ -59,6 +59,19 @@ smoke_check() {
 
 export IMAGE_TAG
 
+finalize_deploy_tree() {
+  # CI syncs this directory via rsync (see .github/workflows/production.yml).
+  # rsync excludes .git/, so an old clone leaves HEAD behind while files on disk
+  # match GitHub — git status then shows thousands of phantom changes.
+  if [[ -d .git ]]; then
+    log "Removing stale .git metadata (deploy tree is rsync-managed, not git-managed)."
+    rm -rf .git
+  fi
+  printf '%s\n' "${IMAGE_TAG}" > .deploy-revision
+}
+
+finalize_deploy_tree
+
 log "Phase 1: build backend image (tag=$IMAGE_TAG) while live serves..."
 IMAGE_TAG="$IMAGE_TAG" "${COMPOSE[@]}" build backend
 
