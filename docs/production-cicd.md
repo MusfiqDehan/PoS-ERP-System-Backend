@@ -14,6 +14,55 @@ push → production   →  ci  →  deploy (blue-green on VPS)
 
 Deploy uses `scripts/deploy/production.sh` over SSH. The live `sortorium-backend` container keeps serving until `sortorium-backend-candidate` is healthy behind Traefik.
 
+## How updates actually work
+
+On every push to `production`:
+
+1. **GitHub Actions** checks out the latest code from GitHub (on the runner).
+2. **rsync** copies that checkout to your VPS at `VPS_DEPLOY_PATH`.
+3. **`scripts/deploy/production.sh`** builds Docker images and runs the blue-green deploy.
+
+The server is only a **target folder** for synced files — not a git clone. The workflow explicitly excludes `.git/` from rsync, so **git on the VPS is not used** to receive updates.
+
+## What you still need on the VPS
+
+| Required | Purpose |
+|----------|---------|
+| `VPS_DEPLOY_PATH` directory | Where rsync puts code |
+| `.env.prod` and `.env.pgbouncer.prod` | Server secrets — **not** overwritten by rsync |
+| Docker + Compose plugin | Build and run containers |
+| `traefik_proxy` network | Traefik routing (external Docker network) |
+| GitHub Actions secrets | SSH access from the workflow (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_DEPLOY_PATH`) |
+| Deploy user in `docker` group | Run compose without sudo |
+
+Removing `.git` from the deploy path is **correct** for this setup. Do not run `git pull` on the server.
+
+## How to verify a deploy worked
+
+After a pipeline run completes:
+
+```bash
+cd /opt/sortorium/backend   # your VPS_DEPLOY_PATH
+
+# Deployed commit (should match GitHub Actions run SHA)
+cat .deploy-revision
+
+# Containers running
+docker ps
+
+# API health (external)
+curl -sf https://sortorium.com/api/v1/health/ready/
+```
+
+You do not need `git status` on the server — the deploy tree is rsync-managed.
+
+## Summary
+
+- The VPS deploy path is **rsync-managed**, not a git working copy.
+- Removing `.git` on the server is fine and avoids phantom `git status` noise.
+- CI/CD delivers code from GitHub via **rsync** on each push to `production`, then runs the blue-green deploy script.
+- Merge or push to `production` → Actions syncs + deploys automatically.
+
 ## Required GitHub secrets
 
 Configure in **Settings → Secrets and variables → Actions**:
