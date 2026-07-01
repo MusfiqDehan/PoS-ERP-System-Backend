@@ -48,13 +48,18 @@ if is_running_in_docker():  # noqa: F405
 DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,  # noqa: F405
     # Silk uses cProfile when SILKY_PYTHON_PROFILER is enabled; Python allows
-    # only one active profiler, so disable the duplicate debug-toolbar panel.
+    # only one active profiler per process, so disable the duplicate debug-toolbar panel.
     "DISABLE_PANELS": [
         "debug_toolbar.panels.profiling.ProfilingPanel",
     ],
 }
 
-SILKY_PYTHON_PROFILER = True
+# cProfile is process-global. With Daphne/ASGI, concurrent requests in the same
+# worker raise "Another profiling tool is already active". Keep SQL/request
+# profiling in Silk; opt into cProfile only for single-threaded runserver.
+SILKY_PYTHON_PROFILER = (
+    os.environ.get("SILKY_PYTHON_PROFILER", "false").lower() == "true"  # noqa: F405
+)
 SILKY_AUTHENTICATION = False
 SILKY_AUTHORISATION = False
 SILKY_META = True
