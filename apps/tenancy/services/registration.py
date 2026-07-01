@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django_tenants.utils import get_public_schema_name, schema_context
 
-from apps.tenancy.feature_registry import TENANT_REGISTRY
+from apps.tenancy.feature_registry import default_feature_keys
 from apps.tenancy.models import Domain, Invitation, PlatformSettings, Tenant
 from apps.tenancy.services.email import EmailService
 from apps.tenancy.services.features import set_tenant_features
@@ -84,12 +84,9 @@ def build_frontend_url(
     return path
 
 
-def default_feature_keys() -> list[str]:
-    keys: list[str] = []
-    for group in TENANT_REGISTRY:
-        for item in group.get("children", []):
-            keys.append(item["key"])
-    return keys
+def build_platform_frontend_url(path_suffix: str) -> str:
+    """Apex marketing host URL for platform-owner flows (no tenant subdomain)."""
+    return build_frontend_url(path_suffix)
 
 
 class TenantRegistrationService:
