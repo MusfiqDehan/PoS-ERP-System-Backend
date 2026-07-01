@@ -15,9 +15,7 @@ def test_list_products_requires_auth(tenant_domain):
 
 
 @pytest.mark.django_db
-def test_admin_can_create_and_list_product(
-    tenant_domain, tenant_schema, tenant_admin
-):
+def test_admin_can_create_and_list_product(tenant_domain, tenant_schema, tenant_admin):
     from apps.inventory.models import Category, Unit
 
     client = APIClient()
