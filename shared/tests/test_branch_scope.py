@@ -37,7 +37,9 @@ def test_cashier_with_branch_is_scoped(tenant, tenant_schema):
         connection.set_tenant(tenant)
         branch = Branch.objects.create(name="Cashier Branch", code="CB")
         role = Role.objects.create(name="Cashier", slug="cashier", is_system=True)
-        user = User.objects.create_user(email="cashier@scope.test", password="TestPass1!")
+        user = User.objects.create_user(
+            email="cashier@scope.test", password="TestPass1!"
+        )
         UserRole.objects.create(
             user_id=user.id,
             user_email=user.email,
