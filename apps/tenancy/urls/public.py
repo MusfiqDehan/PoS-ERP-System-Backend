@@ -6,6 +6,8 @@ from apps.tenancy.views import (
     PasswordResetRequestView,
     PasswordSetupView,
     TenantAuthenticationView,
+    TenantEmployeeInvitationAcceptView,
+    TenantEmployeeInvitationValidateView,
     TenantSelfRegistrationView,
     TokenRefreshView,
 )
@@ -31,5 +33,15 @@ urlpatterns = [
         "password/reset/confirm/",
         PasswordResetConfirmView.as_view(),
         name="tenant-password-reset-confirm",
+    ),
+    path(
+        "invitations/validate/",
+        TenantEmployeeInvitationValidateView.as_view(),
+        name="tenant-employee-invitation-validate",
+    ),
+    path(
+        "invitations/accept/",
+        TenantEmployeeInvitationAcceptView.as_view(),
+        name="tenant-employee-invitation-accept",
     ),
 ]
