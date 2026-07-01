@@ -33,7 +33,7 @@ def test_accept_invitation_assigns_role_and_enables_login(
         token_type=Invitation.TOKEN_TYPE_PLATFORM_INVITE,
         email="accept2@test.com",
         invitee_full_name="Accept2",
-        subdomain="platform",
+        subdomain="",
         company_name="Sortorium Platform",
         platform_role=role,
     )
