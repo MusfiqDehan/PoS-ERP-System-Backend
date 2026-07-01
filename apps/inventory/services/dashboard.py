@@ -173,9 +173,7 @@ class DashboardService:
             branch_field="requesting_branch_id",
             branch_filter_id=branch_param,
         )
-        purchase_orders = PurchaseOrder.objects.filter(
-            status=PurchaseOrder.STATUS_SENT
-        )
+        purchase_orders = PurchaseOrder.objects.filter(status=PurchaseOrder.STATUS_SENT)
         if branch_id:
             transfers = transfers.filter(
                 Q(source_branch_id=branch_id) | Q(target_branch_id=branch_id)
@@ -219,11 +217,15 @@ class DashboardService:
             )
 
         if include_other_branches:
-            other_branches = StockLevel.objects.filter(
-                location_type=StockLevel.LOCATION_BRANCH,
-                product_id=product_id,
-                quantity__gt=0,
-            ).exclude(branch_id=branch_id).select_related("branch")[:5]
+            other_branches = (
+                StockLevel.objects.filter(
+                    location_type=StockLevel.LOCATION_BRANCH,
+                    product_id=product_id,
+                    quantity__gt=0,
+                )
+                .exclude(branch_id=branch_id)
+                .select_related("branch")[:5]
+            )
             for idx, row in enumerate(other_branches, start=2):
                 options.append(
                     {
@@ -235,11 +237,15 @@ class DashboardService:
                     }
                 )
 
-        warehouses = StockLevel.objects.filter(
-            location_type=StockLevel.LOCATION_WAREHOUSE,
-            product_id=product_id,
-            quantity__gt=0,
-        ).select_related("warehouse").order_by("-warehouse__is_central")[:5]
+        warehouses = (
+            StockLevel.objects.filter(
+                location_type=StockLevel.LOCATION_WAREHOUSE,
+                product_id=product_id,
+                quantity__gt=0,
+            )
+            .select_related("warehouse")
+            .order_by("-warehouse__is_central")[:5]
+        )
         for idx, row in enumerate(warehouses, start=10):
             options.append(
                 {
