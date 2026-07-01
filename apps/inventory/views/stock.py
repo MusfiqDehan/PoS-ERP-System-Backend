@@ -32,9 +32,11 @@ from apps.inventory.services.transfer import TransferService
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
 from shared.tenancy.helpers import (
-    get_branch_manager_scope_ids,
+    assert_user_branch_access,
+    get_user_branch_scope_ids,
     scope_queryset_by_branch_access,
 )
+from shared.responses.exceptions import DomainAPIException
 from shared.views import ModelCRUDView
 
 
@@ -51,7 +53,7 @@ class BranchScopedInventoryView(ModelCRUDView):
     def get_queryset(self):
         qs = super().get_queryset()
         branch_filter = self.request.query_params.get("branch")
-        scope_ids = get_branch_manager_scope_ids(self.request.user)
+        scope_ids = get_user_branch_scope_ids(self.request.user)
         if scope_ids is not None and branch_filter not in (None, "", "all"):
             try:
                 filter_uuid = UUID(str(branch_filter))
@@ -323,12 +325,23 @@ class ReplenishmentOptionsView(APIView):
                 error_code=str(ErrorCode.VALIDATION_ERROR),
                 http_status=status.HTTP_400_BAD_REQUEST,
             )
+        try:
+            assert_user_branch_access(request.user, branch_id)
+        except DomainAPIException as exc:
+            return error_response(
+                message=exc.user_message,
+                error_code=exc.error_code,
+                http_status=exc.status_code,
+            )
         from uuid import UUID
 
         try:
+            include_other = get_user_branch_scope_ids(request.user) is None
             options = DashboardService.replenishment_options(
                 product_id=UUID(product_id),
                 branch_id=UUID(branch_id),
+                user=request.user,
+                include_other_branches=include_other,
             )
         except (TypeError, ValueError):
             return error_response(
