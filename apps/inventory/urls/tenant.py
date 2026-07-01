@@ -83,10 +83,16 @@ urlpatterns = [
     ),
     path("products/", ProductListCreateView.as_view(), name="product-list"),
     path("products/expired/", ExpiredProductListView.as_view(), name="product-expired"),
-    path("products/low-stock/", LowStockProductListView.as_view(), name="product-low-stock"),
+    path(
+        "products/low-stock/",
+        LowStockProductListView.as_view(),
+        name="product-low-stock",
+    ),
     path("products/<uuid:pk>/", ProductDetailView.as_view(), name="product-detail"),
     path("warehouses/", WarehouseListCreateView.as_view(), name="warehouse-list"),
-    path("warehouses/<uuid:pk>/", WarehouseDetailView.as_view(), name="warehouse-detail"),
+    path(
+        "warehouses/<uuid:pk>/", WarehouseDetailView.as_view(), name="warehouse-detail"
+    ),
     path("suppliers/", SupplierListCreateView.as_view(), name="supplier-list"),
     path("suppliers/<uuid:pk>/", SupplierDetailView.as_view(), name="supplier-detail"),
     path("stock-levels/", StockLevelListCreateView.as_view(), name="stock-level-list"),
@@ -115,13 +121,19 @@ urlpatterns = [
         StockTransferDetailView.as_view(),
         name="stock-transfer-detail",
     ),
-    path("stock-requests/", StockRequestListCreateView.as_view(), name="stock-request-list"),
+    path(
+        "stock-requests/",
+        StockRequestListCreateView.as_view(),
+        name="stock-request-list",
+    ),
     path(
         "stock-requests/<uuid:pk>/",
         StockRequestDetailView.as_view(),
         name="stock-request-detail",
     ),
-    path("stock-movements/", StockMovementListView.as_view(), name="stock-movement-list"),
+    path(
+        "stock-movements/", StockMovementListView.as_view(), name="stock-movement-list"
+    ),
     path(
         "replenishment-options/",
         ReplenishmentOptionsView.as_view(),
@@ -137,7 +149,9 @@ urlpatterns = [
         PurchaseOrderDetailView.as_view(),
         name="purchase-order-detail",
     ),
-    path("goods-receipts/", GoodsReceiptCreateView.as_view(), name="goods-receipt-create"),
+    path(
+        "goods-receipts/", GoodsReceiptCreateView.as_view(), name="goods-receipt-create"
+    ),
     path("customers/", CustomerListCreateView.as_view(), name="customer-list"),
     path("customers/<uuid:pk>/", CustomerDetailView.as_view(), name="customer-detail"),
     path(
@@ -146,11 +160,15 @@ urlpatterns = [
         name="customer-loyalty",
     ),
     path("promotions/", PromotionListCreateView.as_view(), name="promotion-list"),
-    path("promotions/<uuid:pk>/", PromotionDetailView.as_view(), name="promotion-detail"),
+    path(
+        "promotions/<uuid:pk>/", PromotionDetailView.as_view(), name="promotion-detail"
+    ),
     path("coupons/", CouponListCreateView.as_view(), name="coupon-list"),
     path("coupons/<uuid:pk>/", CouponDetailView.as_view(), name="coupon-detail"),
     path("coupons/validate/", CouponValidateView.as_view(), name="coupon-validate"),
-    path("gift-vouchers/", GiftVoucherListCreateView.as_view(), name="gift-voucher-list"),
+    path(
+        "gift-vouchers/", GiftVoucherListCreateView.as_view(), name="gift-voucher-list"
+    ),
     path(
         "gift-vouchers/<uuid:pk>/",
         GiftVoucherDetailView.as_view(),
@@ -161,7 +179,9 @@ urlpatterns = [
         GiftVoucherValidateView.as_view(),
         name="gift-voucher-validate",
     ),
-    path("dashboard/summary/", DashboardSummaryView.as_view(), name="dashboard-summary"),
+    path(
+        "dashboard/summary/", DashboardSummaryView.as_view(), name="dashboard-summary"
+    ),
     path(
         "dashboard/low-stock/",
         DashboardLowStockView.as_view(),
