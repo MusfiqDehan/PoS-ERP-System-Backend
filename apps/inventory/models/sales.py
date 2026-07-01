@@ -49,7 +49,9 @@ class Sale(BaseModel):
     discount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     ref_number = models.CharField(max_length=50, unique=True)
-    idempotency_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    idempotency_key = models.CharField(
+        max_length=100, unique=True, null=True, blank=True
+    )
     notes = models.TextField(blank=True, default="")
 
     class Meta:
