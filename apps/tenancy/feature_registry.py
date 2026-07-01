@@ -53,6 +53,16 @@ TENANT_REGISTRY: list[RegistryItem] = [
 
 SHARED_FEATURES: list[dict[str, str]] = []
 
+
+def default_feature_keys() -> list[str]:
+    """Return all tenant feature keys from the canonical registry."""
+    keys: list[str] = []
+    for group in TENANT_REGISTRY:
+        for item in group.get("children", []):
+            keys.append(item["key"])
+    return keys
+
+
 PLATFORM_REGISTRY: list[RegistryItem] = [
     {
         "group": "Platform Admin",
