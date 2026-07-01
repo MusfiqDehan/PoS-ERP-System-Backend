@@ -235,9 +235,11 @@ class POSCheckoutView(APIView):
 )
 class POSOrderListView(ModelCRUDView):
     permission_classes = [HasFeaturePermission.require("orders", "view")]
-    queryset = Sale.objects.select_related("branch", "customer", "cashier").prefetch_related(
-        "lines", "payments", "discounts"
-    ).order_by("-created_at")
+    queryset = (
+        Sale.objects.select_related("branch", "customer", "cashier")
+        .prefetch_related("lines", "payments", "discounts")
+        .order_by("-created_at")
+    )
     serializer_class = SaleSerializer
     pagination_class = None
 
@@ -257,7 +259,10 @@ class POSOrderListView(ModelCRUDView):
 @document_crud_view(
     tags=[POS_TENANT_TAG],
     operations={
-        "GET": {"summary": "Retrieve POS order", "description": "Returns sale receipt detail."},
+        "GET": {
+            "summary": "Retrieve POS order",
+            "description": "Returns sale receipt detail.",
+        },
         "POST": {
             "summary": "Cancel POS order",
             "description": (
