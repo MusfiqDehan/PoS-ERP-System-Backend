@@ -79,6 +79,28 @@ def branch_manager_user(tenant_schema, inventory_features):
 
 
 @pytest.fixture
+def cashier_user(tenant_schema, inventory_features):
+    connection.set_tenant(tenant_schema)
+    branch = Branch.objects.create(name="Cashier Branch", code="CASH")
+    role = Role.objects.create(name="Cashier", slug="cashier", is_system=True)
+    for feature_key in ("pos", "orders", "dashboard", "inventory"):
+        RolePermission.objects.create(
+            role=role, feature_key=feature_key, permission_level="edit"
+        )
+    user = User.objects.create_user(
+        email="cashier@inventory.test",
+        password="TestPass1!",
+    )
+    UserRole.objects.create(
+        user_id=user.id,
+        user_email=user.email,
+        role=role,
+        branch=branch,
+    )
+    return user, branch
+
+
+@pytest.fixture
 def second_branch(tenant_schema):
     connection.set_tenant(tenant_schema)
     return Branch.objects.create(name="Branch B", code="B")
