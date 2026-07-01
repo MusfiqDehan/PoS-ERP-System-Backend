@@ -5,7 +5,13 @@ from rest_framework import status
 from rest_framework.views import APIView
 
 from apps.access.permissions import HasFeaturePermission
-from apps.inventory.models import Coupon, Customer, GiftVoucher, LoyaltyAccount, Promotion
+from apps.inventory.models import (
+    Coupon,
+    Customer,
+    GiftVoucher,
+    LoyaltyAccount,
+    Promotion,
+)
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from apps.inventory.openapi import (
@@ -220,7 +226,10 @@ class PromotionListCreateView(ModelCRUDView):
     operations={
         "GET": {"summary": "Retrieve promotion", "description": "Returns a promotion."},
         "PATCH": {"summary": "Update promotion", "description": "Updates a promotion."},
-        "DELETE": {"summary": "Delete promotion", "description": "Deletes a promotion."},
+        "DELETE": {
+            "summary": "Delete promotion",
+            "description": "Deletes a promotion.",
+        },
     },
 )
 class PromotionDetailView(PromotionListCreateView):
@@ -249,9 +258,11 @@ class CouponListCreateView(ModelCRUDView):
             self.request.user,
             self.request.query_params.get("branch"),
         ).values_list("id", flat=True)
-        return Coupon.objects.select_related("promotion").filter(
-            promotion_id__in=promo_ids
-        ).order_by("code")
+        return (
+            Coupon.objects.select_related("promotion")
+            .filter(promotion_id__in=promo_ids)
+            .order_by("code")
+        )
 
 
 @document_crud_view(
