@@ -51,7 +51,10 @@ class WarehouseListCreateView(InventoryListCreateView):
         "GET": {"summary": "Retrieve warehouse", "description": "Returns a warehouse."},
         "PUT": {"summary": "Replace warehouse", "description": "Replaces a warehouse."},
         "PATCH": {"summary": "Update warehouse", "description": "Updates a warehouse."},
-        "DELETE": {"summary": "Delete warehouse", "description": "Deletes a warehouse."},
+        "DELETE": {
+            "summary": "Delete warehouse",
+            "description": "Deletes a warehouse.",
+        },
     },
 )
 class WarehouseDetailView(InventoryDetailView):
