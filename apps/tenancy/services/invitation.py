@@ -6,6 +6,7 @@ from apps.tenancy.models import Invitation
 from apps.tenancy.services.email import EmailService
 from apps.tenancy.services.registration import (
     build_frontend_url,
+    build_platform_frontend_url,
     full_domain_for_subdomain,
 )
 
@@ -16,7 +17,17 @@ class InvitationService:
         Invitation.TOKEN_TYPE_INVITATION: "accept-invite",
         Invitation.TOKEN_TYPE_PASSWORD_RESET: "reset-password",
         Invitation.TOKEN_TYPE_PLATFORM_INVITE: "accept-platform-invite",
+        Invitation.TOKEN_TYPE_EMPLOYEE_INVITE: "accept-employee-invite",
     }
+
+    @staticmethod
+    def _uses_platform_frontend_host(invitation: Invitation) -> bool:
+        if invitation.token_type == Invitation.TOKEN_TYPE_PLATFORM_INVITE:
+            return True
+        return (
+            invitation.token_type == Invitation.TOKEN_TYPE_PASSWORD_RESET
+            and invitation.tenant_id is None
+        )
 
     @classmethod
     def validate_token(cls, raw_token: str) -> Invitation | None:
@@ -28,12 +39,15 @@ class InvitationService:
     @classmethod
     def build_token_url(cls, invitation: Invitation, raw_token: str) -> str:
         path = cls.TOKEN_PATHS.get(invitation.token_type, "accept-invite")
+        path_with_token = f"/{path}?token={quote(raw_token)}"
+        if cls._uses_platform_frontend_host(invitation):
+            return build_platform_frontend_url(path_with_token)
         metadata = invitation.metadata or {}
         domain = metadata.get("domain") or full_domain_for_subdomain(
             invitation.subdomain
         )
         return build_frontend_url(
-            f"/{path}?token={quote(raw_token)}",
+            path_with_token,
             subdomain=invitation.subdomain,
             domain=domain,
         )
