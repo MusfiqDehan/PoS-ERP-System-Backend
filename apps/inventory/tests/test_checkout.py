@@ -63,7 +63,9 @@ def test_checkout_insufficient_stock(tenant_schema, branch_manager_user):
         CheckoutService.checkout(
             branch=branch,
             cashier=user,
-            lines=[{"product": product, "quantity": Decimal("1"), "unit_price": "10.00"}],
+            lines=[
+                {"product": product, "quantity": Decimal("1"), "unit_price": "10.00"}
+            ],
             payments=[{"method": "cash", "amount": "10.00"}],
         )
     assert exc.value.error_code == "INSUFFICIENT_STOCK"
@@ -103,9 +105,7 @@ def test_checkout_idempotency(tenant_schema, branch_manager_user):
 
 
 @pytest.mark.django_db
-def test_pos_checkout_api(
-    tenant_domain, tenant_schema, branch_manager_user
-):
+def test_pos_checkout_api(tenant_domain, tenant_schema, branch_manager_user):
     user, branch = branch_manager_user
     category = Category.objects.create(name="Cat", slug="cat")
     unit = Unit.objects.create(name="Unit", short_name="u")
