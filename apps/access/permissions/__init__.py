@@ -1,4 +1,5 @@
 from apps.access.permissions.classes import (
+    CanManageEmployeeInvitations,
     CanManageTenantBranding,
     CanViewTenantUsers,
     HasFeaturePermission,
@@ -7,6 +8,7 @@ from apps.access.permissions.classes import (
 )
 
 __all__ = [
+    "CanManageEmployeeInvitations",
     "CanManageTenantBranding",
     "CanViewTenantUsers",
     "HasFeaturePermission",

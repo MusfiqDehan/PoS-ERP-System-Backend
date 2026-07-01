@@ -27,6 +27,20 @@ class CanViewTenantUsers(BasePermission):
         ).exists()
 
 
+class CanManageEmployeeInvitations(BasePermission):
+    """Tenant role admins and branch managers may manage employee invitations."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if IsRoleAdmin().has_permission(request, view):
+            return True
+        return UserRole.objects.filter(
+            user_id=user.id, role__slug="branch_manager"
+        ).exists()
+
+
 class HasFeaturePermission(BasePermission):
     """Factory permission: requires (feature_key, required_level) on current tenant."""
 
