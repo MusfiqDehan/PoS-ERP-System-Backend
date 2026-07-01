@@ -962,9 +962,7 @@ def push_collection(payload: dict[str, Any]) -> None:
         )
 
     _sync_environment_variables()
-    print(
-        f"Pushed {total_created} new requests to collection {COLLECTION_ID}."
-    )
+    print(f"Pushed {total_created} new requests to collection {COLLECTION_ID}.")
 
 
 def _fetch_specs_page(*, cursor: str | None) -> dict[str, Any]:
