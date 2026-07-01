@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from apps.access.models import UserRole
+from shared.responses.error_codes import ErrorCode
+from shared.responses.exceptions import DomainAPIException
 
 
 def user_has_tenant_admin_role(user) -> bool:
@@ -13,8 +17,13 @@ def is_tenant_admin_user(user) -> bool:
     return user_has_tenant_admin_role(user)
 
 
-def get_branch_manager_scope_ids(user):
-    """Return branch IDs managed by branch_manager role assignments."""
+def get_user_branch_scope_ids(user):
+    """Return branch IDs the user may access, or None if unrestricted.
+
+    - None: tenant admin or user without branch-assigned roles
+    - []: user has role assignment(s) but no branch on any UserRole
+    - [uuid, ...]: union of non-null UserRole.branch_id values
+    """
     if not (user and user.is_authenticated):
         return None
     if is_tenant_admin_user(user):
@@ -23,23 +32,55 @@ def get_branch_manager_scope_ids(user):
     branch_ids = list(
         UserRole.objects.filter(
             user_id=user.id,
-            role__slug="branch_manager",
             branch_id__isnull=False,
         )
         .values_list("branch_id", flat=True)
         .distinct()
     )
-    if not branch_ids:
-        has_branch_manager = UserRole.objects.filter(
-            user_id=user.id,
-            role__slug="branch_manager",
-        ).exists()
-        return [] if has_branch_manager else None
-    return branch_ids
+    if branch_ids:
+        return branch_ids
+
+    return None
+
+
+def get_branch_manager_scope_ids(user):
+    """Deprecated alias for ``get_user_branch_scope_ids``."""
+    return get_user_branch_scope_ids(user)
+
+
+def assert_user_branch_access(user, branch_id) -> None:
+    """Raise DomainAPIException when user cannot access the given branch."""
+    scope_ids = get_user_branch_scope_ids(user)
+    if scope_ids is None:
+        return
+    try:
+        branch_uuid = branch_id if isinstance(branch_id, UUID) else UUID(str(branch_id))
+    except (TypeError, ValueError) as exc:
+        raise DomainAPIException(
+            error_code=ErrorCode.VALIDATION_ERROR,
+            user_message="Invalid branch identifier.",
+            status_code=400,
+        ) from exc
+    if not scope_ids or branch_uuid not in scope_ids:
+        raise DomainAPIException(
+            error_code=ErrorCode.PERMISSION_DENIED,
+            user_message="You do not have access to this branch.",
+            status_code=403,
+        )
+
+
+def resolve_branch_filter_id(user, branch_filter_id):
+    """Return explicit branch filter or auto-select sole assigned branch."""
+    if branch_filter_id not in (None, "", "all"):
+        return branch_filter_id
+    scope_ids = get_user_branch_scope_ids(user)
+    if scope_ids and len(scope_ids) == 1:
+        return str(scope_ids[0])
+    return branch_filter_id
 
 
 def apply_branch_scope(queryset, user, branch_field: str = "branch_id"):
-    scope_ids = get_branch_manager_scope_ids(user)
+    scope_ids = get_user_branch_scope_ids(user)
     if scope_ids is None:
         return queryset
     if not scope_ids:
@@ -62,8 +103,6 @@ def apply_branch_filter_for_tenant_admin(
         if not isinstance(branch_id, str):
             branch_id_value = branch_id
         else:
-            from uuid import UUID
-
             branch_id_value = UUID(branch_id)
     except (TypeError, ValueError):
         return queryset.none()
@@ -71,12 +110,8 @@ def apply_branch_filter_for_tenant_admin(
 
 
 def scope_users_by_branch_access(queryset, user, branch_filter_id=None):
-    """Filter tenant users by branch_manager scope or optional admin branch filter."""
-    from uuid import UUID
-
-    from apps.access.models import UserRole
-
-    scope_ids = get_branch_manager_scope_ids(user)
+    """Filter tenant users by branch scope or optional admin branch filter."""
+    scope_ids = get_user_branch_scope_ids(user)
     if scope_ids is None:
         if is_tenant_admin_user(user) and branch_filter_id not in (None, "", "all"):
             try:
