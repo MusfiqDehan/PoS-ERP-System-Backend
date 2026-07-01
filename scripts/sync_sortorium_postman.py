@@ -17,6 +17,7 @@ import os
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ OPENAPI_PATH = REPO_ROOT / ".tmp-sortorium-openapi.yaml"
 WORKSPACE_ID = "60de6d65-7979-42ab-a624-b0aa01c3b03c"
 COLLECTION_ID = "28790264-575669e6-fbc3-41d1-9577-e89c9fbb5af1"
 SPEC_NAME = "sortorium-pos-api"
+SPEC_ROOT_FILE = "sortorium-openapi.json"
 
 JSON_OPTS = {"raw": {"language": "json"}}
 
@@ -60,6 +62,13 @@ def _platform_auth() -> dict[str, Any]:
         "bearer": [
             {"key": "token", "value": "{{platformAccessToken}}", "type": "string"}
         ],
+    }
+
+
+def _tenant_auth() -> dict[str, Any]:
+    return {
+        "type": "bearer",
+        "bearer": [{"key": "token", "value": "{{accessToken}}", "type": "string"}],
     }
 
 
@@ -458,9 +467,296 @@ def remove_stale_postman_folders(payload: dict[str, Any]) -> bool:
 
 
 def merge_platform_owner_folder(payload: dict[str, Any]) -> bool:
+    return _merge_folder(payload, build_platform_owner_folder())
+
+
+def build_inventory_pos_folder() -> dict[str, Any]:
+    """Tenant inventory, procurement, and POS endpoints (requires accessToken)."""
+    inv = ["api", "v1", "inventory"]
+    pos = ["api", "v1", "pos"]
+    auth = _tenant_auth()
+    items = [
+        _request(
+            name="List categories",
+            method="GET",
+            path_segments=inv + ["categories"],
+            description="Lists product categories. Requires products view permission.",
+            auth=auth,
+        ),
+        _request(
+            name="Create category",
+            method="POST",
+            path_segments=inv + ["categories"],
+            description="Creates a category. Requires products edit permission.",
+            body=_json_body({"name": "Dairy", "slug": "dairy", "status": "active"}),
+            auth=auth,
+        ),
+        _request(
+            name="List products",
+            method="GET",
+            path_segments=inv + ["products"],
+            description="Lists tenant catalog products. Requires products view permission.",
+            auth=auth,
+        ),
+        _request(
+            name="Create product",
+            method="POST",
+            path_segments=inv + ["products"],
+            description="Creates a product with category and unit FKs. Requires products edit.",
+            body=_json_body(
+                {
+                    "name": "Milk",
+                    "slug": "milk",
+                    "sku": "MILK-001",
+                    "category": "{{categoryId}}",
+                    "unit": "{{unitId}}",
+                    "product_type": "single",
+                    "selling_type": "retail",
+                    "price": "120.00",
+                    "cost": "80.00",
+                    "min_qty_alert": "10",
+                    "is_active": True,
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="List low-stock products",
+            method="GET",
+            path_segments=inv + ["products", "low-stock"],
+            description=(
+                "Cross-location low stock. Tenant admin sees all branches; optional "
+                "?branch=<uuid> filter."
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="List warehouses",
+            method="GET",
+            path_segments=inv + ["warehouses"],
+            description="Lists warehouses. Requires inventory view permission.",
+            auth=auth,
+        ),
+        _request(
+            name="Create warehouse",
+            method="POST",
+            path_segments=inv + ["warehouses"],
+            description="Creates a warehouse. Requires inventory edit permission.",
+            body=_json_body(
+                {
+                    "name": "Warehouse North",
+                    "code": "WH-NORTH",
+                    "city": "Dhaka",
+                    "is_central": True,
+                    "status": "active",
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="List suppliers",
+            method="GET",
+            path_segments=inv + ["suppliers"],
+            description="Lists suppliers. Requires inventory view permission.",
+            auth=auth,
+        ),
+        _request(
+            name="Create supplier",
+            method="POST",
+            path_segments=inv + ["suppliers"],
+            description="Creates a supplier. Requires inventory edit permission.",
+            body=_json_body(
+                {
+                    "code": "SUP-001",
+                    "name": "ABC Foods",
+                    "email": "orders@abcfoods.example",
+                    "phone": "+8801700000000",
+                    "status": "active",
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="List stock levels",
+            method="GET",
+            path_segments=inv + ["stock-levels"],
+            description=(
+                "Branch/warehouse stock levels. Admin: all branches; ?branch= filters."
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="Create stock adjustment",
+            method="POST",
+            path_segments=inv + ["stock-adjustments"],
+            description="Adjusts stock quantity at a branch or warehouse.",
+            body=_json_body(
+                {
+                    "branch": "{{branchId}}",
+                    "product": "{{productId}}",
+                    "quantity_after": "50",
+                    "reason": "Opening stock",
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="Create stock transfer",
+            method="POST",
+            path_segments=inv + ["stock-transfers"],
+            description="Creates a branch-to-branch or warehouse transfer request.",
+            body=_json_body(
+                {
+                    "transfer_type": "branch_branch",
+                    "source_branch": "{{sourceBranchId}}",
+                    "target_branch": "{{branchId}}",
+                    "lines": [
+                        {
+                            "product": "{{productId}}",
+                            "quantity_requested": "20",
+                        }
+                    ],
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="Get replenishment options",
+            method="GET",
+            path_segments=inv + ["replenishment-options"],
+            description="Ranked internal stock sources for a product at a branch.",
+            auth=auth,
+        ),
+        _request(
+            name="Create purchase order",
+            method="POST",
+            path_segments=inv + ["purchase-orders"],
+            description="Creates a draft purchase order for a warehouse.",
+            body=_json_body(
+                {
+                    "supplier": "{{supplierId}}",
+                    "warehouse": "{{warehouseId}}",
+                    "lines": [
+                        {
+                            "product": "{{productId}}",
+                            "quantity_ordered": "1000",
+                            "unit_cost": "80.00",
+                        }
+                    ],
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="Create goods receipt",
+            method="POST",
+            path_segments=inv + ["goods-receipts"],
+            description="Receives goods against a sent PO and increments warehouse stock.",
+            body=_json_body(
+                {
+                    "purchase_order": "{{purchaseOrderId}}",
+                    "warehouse": "{{warehouseId}}",
+                    "lines": [
+                        {
+                            "product": "{{productId}}",
+                            "quantity_received": "1000",
+                        }
+                    ],
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="Validate coupon",
+            method="POST",
+            path_segments=inv + ["coupons", "validate"],
+            description="Validates a coupon code for checkout.",
+            body=_json_body({"code": "SAVE10"}),
+            auth=auth,
+        ),
+        _request(
+            name="List POS products",
+            method="GET",
+            path_segments=pos + ["products"],
+            description="Branch-scoped sellable catalog with live stock. Requires ?branch=.",
+            auth=auth,
+        ),
+        _request(
+            name="Validate POS cart",
+            method="POST",
+            path_segments=pos + ["cart", "validate"],
+            description="Validates line items, stock, and promotion preview.",
+            body=_json_body(
+                {
+                    "branch": "{{branchId}}",
+                    "lines": [
+                        {"product": "{{productId}}", "quantity": "2"},
+                    ],
+                    "coupon_code": "SAVE10",
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="POS checkout",
+            method="POST",
+            path_segments=pos + ["checkout"],
+            description=(
+                "Completes a sale with payments, promotions, and atomic stock decrement."
+            ),
+            body=_json_body(
+                {
+                    "branch": "{{branchId}}",
+                    "idempotency_key": "checkout-{{$timestamp}}",
+                    "lines": [
+                        {
+                            "product": "{{productId}}",
+                            "quantity": "2",
+                            "unit_price": "120.00",
+                        }
+                    ],
+                    "payments": [
+                        {"method": "cash", "amount": "100.00"},
+                        {"method": "card", "amount": "140.00"},
+                    ],
+                    "coupon_code": "SAVE10",
+                    "loyalty_points_redeemed": 50,
+                }
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="List POS orders",
+            method="GET",
+            path_segments=pos + ["orders"],
+            description=(
+                "Lists completed POS orders. Admin: all branches; ?branch= filters."
+            ),
+            auth=auth,
+        ),
+        _request(
+            name="Dashboard summary",
+            method="GET",
+            path_segments=inv + ["dashboard", "summary"],
+            description=(
+                "Aggregated KPIs. ?scope=business|branch|warehouse and optional branch filter."
+            ),
+            auth=auth,
+        ),
+    ]
+    return {
+        "name": "10 - Inventory & POS",
+        "description": (
+            "Tenant inventory catalog, stock, procurement, promotions, POS checkout, "
+            "and dashboard. Requires tenant JWT (accessToken) after folder 02 login."
+        ),
+        "item": items,
+    }
+
+
+def _merge_folder(payload: dict[str, Any], folder: dict[str, Any]) -> bool:
     collection = payload["collection"]
     ensure_collection_variables(collection)
-    folder = build_platform_owner_folder()
     items = collection.setdefault("item", [])
     for idx, existing in enumerate(items):
         if existing.get("name") == folder["name"]:
@@ -468,6 +764,16 @@ def merge_platform_owner_folder(payload: dict[str, Any]) -> bool:
             return False
     items.append(folder)
     return True
+
+
+def merge_inventory_pos_folder(payload: dict[str, Any]) -> bool:
+    return _merge_folder(payload, build_inventory_pos_folder())
+
+
+SYNCED_REMOTE_FOLDERS: list[tuple[str, Any]] = [
+    ("12 - Platform Owner", build_platform_owner_folder),
+    ("10 - Inventory & POS", build_inventory_pos_folder),
+]
 
 
 def regenerate_openapi() -> None:
@@ -504,8 +810,14 @@ def postman_request(
             "Content-Type": "application/json",
         },
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode(errors="replace")
+        raise RuntimeError(
+            f"Postman API {method} {url} failed (HTTP {exc.code}): {detail}"
+        ) from exc
 
 
 def _item_to_postman_request(item: dict[str, Any], folder_id: str) -> dict[str, Any]:
@@ -548,21 +860,16 @@ def _item_to_postman_request(item: dict[str, Any], folder_id: str) -> dict[str, 
     return body
 
 
-def _find_or_create_platform_folder(remote_collection: dict[str, Any]) -> str:
+def _find_or_create_folder(
+    remote_collection: dict[str, Any], folder_name: str, description: str
+) -> str:
     for folder in remote_collection.get("item", []):
-        if folder.get("name") == "12 - Platform Owner":
+        if folder.get("name") == folder_name:
             return folder["id"]
     created = postman_request(
         "POST",
         f"https://api.getpostman.com/collections/{COLLECTION_ID}/folders",
-        {
-            "name": "12 - Platform Owner",
-            "description": (
-                "Platform owner console APIs — invite-only onboarding, JWT auth with "
-                "platform_user claim, settings, feature registry, and tenant "
-                "administration. Run login first to set platformAccessToken."
-            ),
-        },
+        {"name": folder_name, "description": description},
     )
     return created["data"]["id"]
 
@@ -590,7 +897,18 @@ def _sync_environment_variables() -> None:
         f"https://api.getpostman.com/environments/{env_id}",
     )["environment"]
     keys = {value["key"] for value in remote_env.get("values", [])}
-    for key in ("platformAccessToken", "platformRefreshToken"):
+    for key in (
+        "platformAccessToken",
+        "platformRefreshToken",
+        "categoryId",
+        "unitId",
+        "productId",
+        "branchId",
+        "sourceBranchId",
+        "warehouseId",
+        "supplierId",
+        "purchaseOrderId",
+    ):
         if key not in keys:
             remote_env["values"].append({"key": key, "value": "", "enabled": True})
     postman_request(
@@ -608,64 +926,166 @@ def push_collection(payload: dict[str, Any]) -> None:
     )
     remote_collection = remote["collection"]
     local_items = payload["collection"].get("item", [])
-    platform_folder = next(
-        (item for item in local_items if item.get("name") == "12 - Platform Owner"),
-        build_platform_owner_folder(),
-    )
-    folder_id = _find_or_create_platform_folder(remote_collection)
 
-    existing_names = set()
-    for folder in remote_collection.get("item", []):
-        if folder.get("name") == "12 - Platform Owner":
-            for request in folder.get("item", []):
-                existing_names.add(request.get("name"))
-
-    created = 0
-    for item in platform_folder.get("item", []):
-        if item["name"] in existing_names:
-            continue
-        postman_request(
-            "POST",
-            f"https://api.getpostman.com/collections/{COLLECTION_ID}/requests",
-            _item_to_postman_request(item, folder_id),
+    total_created = 0
+    for folder_name, folder_builder in SYNCED_REMOTE_FOLDERS:
+        local_folder = next(
+            (item for item in local_items if item.get("name") == folder_name),
+            folder_builder(),
         )
-        created += 1
+        folder_id = _find_or_create_folder(
+            remote_collection,
+            folder_name,
+            local_folder.get("description", ""),
+        )
+
+        existing_names = set()
+        for folder in remote_collection.get("item", []):
+            if folder.get("name") == folder_name:
+                for request in folder.get("item", []):
+                    existing_names.add(request.get("name"))
+
+        created = 0
+        for item in local_folder.get("item", []):
+            if item["name"] in existing_names:
+                continue
+            postman_request(
+                "POST",
+                f"https://api.getpostman.com/collections/{COLLECTION_ID}/requests",
+                _item_to_postman_request(item, folder_id),
+            )
+            created += 1
+        total_created += created
+        print(
+            f"Synced folder {folder_name!r}: {created} new requests, "
+            f"{len(existing_names)} already present."
+        )
 
     _sync_environment_variables()
     print(
-        f"Synced folder '12 - Platform Owner' on collection {COLLECTION_ID} "
-        f"({created} new requests, {len(existing_names)} already present)."
+        f"Pushed {total_created} new requests to collection {COLLECTION_ID}."
     )
 
 
+def _fetch_specs_page(*, cursor: str | None) -> dict[str, Any]:
+    """List one page of specs; tries workspaceId first, then legacy workspace param."""
+    query_variants = [
+        f"workspaceId={WORKSPACE_ID}&limit=25",
+        f"workspace={WORKSPACE_ID}",
+    ]
+    last_error: RuntimeError | None = None
+    for query in query_variants:
+        url = f"https://api.getpostman.com/specs?{query}"
+        if cursor:
+            url += f"&cursor={cursor}"
+        try:
+            return postman_request("GET", url)
+        except RuntimeError as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Unable to list Postman specs.")
+
+
+def list_specs() -> list[dict[str, Any]]:
+    """Return all Spec Hub specs in the GeekSSort workspace (paginated)."""
+    specs: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:
+        data = _fetch_specs_page(cursor=cursor)
+        page = data.get("data") or data.get("specs") or []
+        specs.extend(page)
+        meta = data.get("meta") or {}
+        cursor = meta.get("nextCursor") or data.get("nextCursor")
+        if not cursor:
+            break
+    return specs
+
+
 def find_spec_id() -> str | None:
-    try:
-        data = postman_request(
-            "GET",
-            f"https://api.getpostman.com/specs?workspace={WORKSPACE_ID}",
-        )
-    except urllib.error.HTTPError:
-        return None
-    specs = data.get("data") or data.get("specs") or []
-    for spec in specs:
+    for spec in list_specs():
         if spec.get("name") == SPEC_NAME:
             return spec.get("id") or spec.get("uid")
     return None
 
 
+def _spec_upload_content(content_yaml: str, *, file_path: str) -> str:
+    """Match Spec Hub root file format (JSON vs YAML)."""
+    if file_path.lower().endswith(".json"):
+        import yaml
+
+        return json.dumps(yaml.safe_load(content_yaml), indent=2) + "\n"
+    return content_yaml
+
+
+def get_spec_root_file_path(spec_id: str) -> str:
+    """Return the ROOT file path for a Spec Hub spec."""
+    data = postman_request("GET", f"https://api.getpostman.com/specs/{spec_id}/files")
+    files = data.get("files") or data.get("data") or []
+    for entry in files:
+        if entry.get("type") == "ROOT":
+            return str(entry.get("path") or entry.get("name") or SPEC_ROOT_FILE)
+    for entry in files:
+        path = entry.get("path") or entry.get("name")
+        if path:
+            return str(path)
+    return SPEC_ROOT_FILE
+
+
+def update_spec_content(spec_id: str, content: str) -> None:
+    """Upload OpenAPI content to the spec's root file."""
+    file_path = get_spec_root_file_path(spec_id)
+    encoded_path = urllib.parse.quote(file_path, safe="/")
+    upload_content = _spec_upload_content(content, file_path=file_path)
+    postman_request(
+        "PATCH",
+        f"https://api.getpostman.com/specs/{spec_id}/files/{encoded_path}",
+        {"content": upload_content},
+    )
+
+
+def create_spec(content: str) -> str:
+    """Create the Spec Hub spec and return its ID."""
+    upload_content = _spec_upload_content(content, file_path=SPEC_ROOT_FILE)
+    data = postman_request(
+        "POST",
+        f"https://api.getpostman.com/specs?workspaceId={WORKSPACE_ID}",
+        {
+            "name": SPEC_NAME,
+            "type": "OPENAPI:3.0",
+            "files": [
+                {
+                    "path": SPEC_ROOT_FILE,
+                    "content": upload_content,
+                    "type": "ROOT",
+                }
+            ],
+        },
+    )
+    spec = data.get("spec") or data.get("data") or data
+    spec_id = spec.get("id") or spec.get("uid")
+    if not spec_id:
+        raise RuntimeError(
+            f"Postman did not return a spec id after creating {SPEC_NAME!r}: {data!r}"
+        )
+    print(f"Created Spec Hub spec {SPEC_NAME!r} ({spec_id}).")
+    return spec_id
+
+
 def push_openapi_spec() -> None:
     if not OPENAPI_PATH.exists():
         regenerate_openapi()
-    spec_id = find_spec_id()
-    if not spec_id:
-        print(f"Spec {SPEC_NAME!r} not found in Postman; skipping spec push.")
-        return
     content = OPENAPI_PATH.read_text(encoding="utf-8")
-    postman_request(
-        "PUT",
-        f"https://api.getpostman.com/specs/{spec_id}/files/root",
-        {"content": content, "type": "root"},
-    )
+    try:
+        spec_id = find_spec_id()
+    except RuntimeError as exc:
+        print(f"Warning: could not list specs ({exc}); will attempt create.")
+        spec_id = None
+    if spec_id is None:
+        spec_id = create_spec(content)
+        print(f"Uploaded OpenAPI to new Spec Hub spec {spec_id}.")
+        return
+    update_spec_content(spec_id, content)
     print(f"Pushed OpenAPI to Spec Hub spec {spec_id}.")
 
 
@@ -693,7 +1113,8 @@ def main() -> int:
 
     payload = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
     removed = remove_stale_postman_folders(payload)
-    added = merge_platform_owner_folder(payload)
+    platform_added = merge_platform_owner_folder(payload)
+    inventory_added = merge_inventory_pos_folder(payload)
     info = payload["collection"]["info"]
     info["description"] = (
         "Sortorium PoS API — organized by user journey with example request bodies "
@@ -703,8 +1124,12 @@ def main() -> int:
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    action = "Added" if added else "Updated"
-    print(f"{action} folder '12 - Platform Owner' in {PAYLOAD_PATH}")
+    for label, added in (
+        ("12 - Platform Owner", platform_added),
+        ("10 - Inventory & POS", inventory_added),
+    ):
+        action = "Added" if added else "Updated"
+        print(f"{action} folder {label!r} in {PAYLOAD_PATH}")
     if removed:
         print("Removed stale folder '10 - Platform Admin - Tenancy' from payload.")
 
