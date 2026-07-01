@@ -13,12 +13,14 @@ class Invitation(BaseModel):
     TOKEN_TYPE_INVITATION = "invitation"
     TOKEN_TYPE_PASSWORD_RESET = "password_reset"
     TOKEN_TYPE_PLATFORM_INVITE = "platform_invite"
+    TOKEN_TYPE_EMPLOYEE_INVITE = "employee_invite"
 
     TOKEN_TYPE_CHOICES = [
         (TOKEN_TYPE_VERIFICATION, "Verification"),
         (TOKEN_TYPE_INVITATION, "Invitation"),
         (TOKEN_TYPE_PASSWORD_RESET, "Password Reset"),
         (TOKEN_TYPE_PLATFORM_INVITE, "Platform Team Invitation"),
+        (TOKEN_TYPE_EMPLOYEE_INVITE, "Tenant Employee Invitation"),
     ]
 
     token_type = models.CharField(max_length=20, choices=TOKEN_TYPE_CHOICES)
