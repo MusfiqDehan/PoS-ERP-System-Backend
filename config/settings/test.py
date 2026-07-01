@@ -1,5 +1,8 @@
 """Test settings."""
 
+import tempfile
+from pathlib import Path
+
 from .base import *  # noqa: F403
 
 DEBUG = True
@@ -7,6 +10,8 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
+MEDIA_ROOT = Path(tempfile.mkdtemp(prefix="sortorium-test-media-"))
 
 REST_FRAMEWORK = {
     **REST_FRAMEWORK,  # noqa: F405
