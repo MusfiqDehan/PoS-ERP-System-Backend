@@ -1,5 +1,6 @@
 """Promotion and customer views."""
 
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
 
@@ -31,8 +32,26 @@ from apps.inventory.serializers.promotions import (
 from apps.inventory.services.promotion import PromotionService
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
-from shared.tenancy.helpers import scope_queryset_by_branch_access
+from shared.tenancy.helpers import (
+    get_user_branch_scope_ids,
+    scope_queryset_by_branch_access,
+)
 from shared.views import ModelCRUDView
+
+
+def _scoped_promotion_queryset(user, branch_filter_id=None):
+    qs = Promotion.objects.all()
+    scope_ids = get_user_branch_scope_ids(user)
+    if scope_ids is None:
+        return scope_queryset_by_branch_access(
+            qs,
+            user,
+            branch_field="branch_id",
+            branch_filter_id=branch_filter_id,
+        )
+    if not scope_ids:
+        return qs.none()
+    return qs.filter(Q(branch__isnull=True) | Q(branch_id__in=scope_ids))
 
 
 class _CustomerBaseView(ModelCRUDView):
@@ -112,6 +131,22 @@ class CustomerLoyaltyView(APIView):
     permission_classes = [HasFeaturePermission.require("customers", "view")]
 
     def get(self, request, pk):
+        customer = (
+            scope_queryset_by_branch_access(
+                Customer.objects.all(),
+                request.user,
+                branch_field="branch_id",
+                branch_filter_id=request.query_params.get("branch"),
+            )
+            .filter(pk=pk)
+            .first()
+        )
+        if customer is None:
+            return error_response(
+                message="Customer not found.",
+                error_code=str(ErrorCode.NOT_FOUND),
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
         account = LoyaltyAccount.objects.filter(customer_id=pk).first()
         if account is None:
             return error_response(
@@ -132,6 +167,22 @@ class CustomerLoyaltyView(APIView):
                 message="Permission denied.",
                 error_code=str(ErrorCode.PERMISSION_DENIED),
                 http_status=status.HTTP_403_FORBIDDEN,
+            )
+        customer = (
+            scope_queryset_by_branch_access(
+                Customer.objects.all(),
+                request.user,
+                branch_field="branch_id",
+                branch_filter_id=request.query_params.get("branch"),
+            )
+            .filter(pk=pk)
+            .first()
+        )
+        if customer is None:
+            return error_response(
+                message="Customer not found.",
+                error_code=str(ErrorCode.NOT_FOUND),
+                http_status=status.HTTP_404_NOT_FOUND,
             )
         account, _ = LoyaltyAccount.objects.get_or_create(customer_id=pk)
         points = request.data.get("points_balance")
@@ -157,6 +208,12 @@ class PromotionListCreateView(ModelCRUDView):
     serializer_class = PromotionSerializer
     pagination_class = None
 
+    def get_queryset(self):
+        return _scoped_promotion_queryset(
+            self.request.user,
+            self.request.query_params.get("branch"),
+        ).order_by("name")
+
 
 @document_crud_view(
     tags=[INVENTORY_TENANT_TAG],
@@ -167,7 +224,11 @@ class PromotionListCreateView(ModelCRUDView):
     },
 )
 class PromotionDetailView(PromotionListCreateView):
-    queryset = Promotion.objects.all()
+    def get_queryset(self):
+        return _scoped_promotion_queryset(
+            self.request.user,
+            self.request.query_params.get("branch"),
+        )
 
 
 @document_crud_view(
@@ -183,6 +244,15 @@ class CouponListCreateView(ModelCRUDView):
     serializer_class = CouponSerializer
     pagination_class = None
 
+    def get_queryset(self):
+        promo_ids = _scoped_promotion_queryset(
+            self.request.user,
+            self.request.query_params.get("branch"),
+        ).values_list("id", flat=True)
+        return Coupon.objects.select_related("promotion").filter(
+            promotion_id__in=promo_ids
+        ).order_by("code")
+
 
 @document_crud_view(
     tags=[INVENTORY_TENANT_TAG],
@@ -193,7 +263,7 @@ class CouponListCreateView(ModelCRUDView):
     },
 )
 class CouponDetailView(CouponListCreateView):
-    queryset = Coupon.objects.select_related("promotion")
+    pass
 
 
 @document_inventory_post_api_view(
