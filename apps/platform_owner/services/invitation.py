@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
@@ -12,23 +11,16 @@ from apps.tenancy.models import Invitation, PlatformRole, PlatformUserRole
 from apps.tenancy.services.email import EmailService
 from apps.tenancy.services.invitation import InvitationService
 from apps.tenancy.services.platform_permissions import PlatformPermissionService
-from apps.tenancy.services.registration import build_frontend_url
+from apps.tenancy.services.registration import build_platform_frontend_url
 
 from apps.platform_owner.services.auth import PlatformAuthService
 
 User = get_user_model()
 
 
-def _platform_console_subdomain() -> str:
-    return (
-        getattr(settings, "PLATFORM_CONSOLE_SUBDOMAIN", "platform").strip()
-        or "platform"
-    )
-
-
 def _platform_invite_url(raw_token: str) -> str:
     path = f"/accept-platform-invite?token={quote(raw_token)}"
-    return build_frontend_url(path, subdomain=_platform_console_subdomain())
+    return build_platform_frontend_url(path)
 
 
 class PlatformInvitationService:
@@ -87,7 +79,7 @@ class PlatformInvitationService:
                     token_type=Invitation.TOKEN_TYPE_PLATFORM_INVITE,
                     email=email,
                     invitee_full_name=full_name,
-                    subdomain=_platform_console_subdomain(),
+                    subdomain="",
                     company_name="Sortorium Platform",
                     invited_by_email=getattr(inviter, "email", "") or "",
                     ttl_minutes=72 * 60,
