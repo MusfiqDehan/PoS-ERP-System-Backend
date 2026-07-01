@@ -23,6 +23,14 @@ urlpatterns = [
         "api/v1/branches/",
         include(("apps.branch.urls.tenant", "branch"), namespace="branch"),
     ),
+    path(
+        "api/v1/inventory/",
+        include(("apps.inventory.urls.tenant", "inventory"), namespace="inventory"),
+    ),
+    path(
+        "api/v1/pos/",
+        include(("apps.inventory.urls.pos", "pos"), namespace="pos"),
+    ),
 ]
 
 urlpatterns += dev_tooling_urlpatterns()
