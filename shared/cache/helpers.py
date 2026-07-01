@@ -83,14 +83,14 @@ def bump_tenant_access_me_version(schema_name: str) -> None:
 def stats_scope_token(user, branch_filter_id=None) -> str:
     """Build a user-aware stats cache scope (branch managers != tenant admins)."""
     from shared.tenancy.helpers import (
-        get_branch_manager_scope_ids,
+        get_user_branch_scope_ids,
         is_tenant_admin_user,
     )
 
     branch = branch_filter_id or "all"
     if is_tenant_admin_user(user):
         return f"admin:{branch}"
-    scope_ids = get_branch_manager_scope_ids(user)
+    scope_ids = get_user_branch_scope_ids(user)
     if scope_ids is None:
         return f"user:{user.id}:{branch}"
     joined = ",".join(str(branch_id) for branch_id in sorted(scope_ids))
