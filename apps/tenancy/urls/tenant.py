@@ -7,8 +7,13 @@ from apps.tenancy.views import (
     ProfilePictureView,
     TenantBrandingView,
     TenantCompanyLogoView,
+    TenantEmployeeInvitationListCreateView,
+    TenantEmployeeInvitationRevokeView,
+    TenantUserDeactivateView,
+    TenantUserDetailView,
+    TenantUserListView,
+    TenantUserRolesView,
 )
-from apps.tenancy.views.users import TenantUserListView
 
 app_name = "tenancy"
 
@@ -26,6 +31,31 @@ urlpatterns = [
     ),
     path("password/change/", ChangePasswordView.as_view(), name="password-change"),
     path("users/", TenantUserListView.as_view(), name="tenant-user-list"),
+    path(
+        "users/<uuid:user_id>/",
+        TenantUserDetailView.as_view(),
+        name="tenant-user-detail",
+    ),
+    path(
+        "users/<uuid:user_id>/roles/",
+        TenantUserRolesView.as_view(),
+        name="tenant-user-roles",
+    ),
+    path(
+        "users/<uuid:user_id>/deactivate/",
+        TenantUserDeactivateView.as_view(),
+        name="tenant-user-deactivate",
+    ),
+    path(
+        "invitations/",
+        TenantEmployeeInvitationListCreateView.as_view(),
+        name="tenant-employee-invitation-list",
+    ),
+    path(
+        "invitations/<uuid:invitation_id>/",
+        TenantEmployeeInvitationRevokeView.as_view(),
+        name="tenant-employee-invitation-revoke",
+    ),
     path(
         "settings/branding/",
         TenantBrandingView.as_view(),
