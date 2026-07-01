@@ -22,8 +22,24 @@ from apps.inventory.serializers.promotions import SaleSerializer
 from apps.inventory.services.checkout import CheckoutService
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
-from shared.tenancy.helpers import scope_queryset_by_branch_access
+from shared.responses.exceptions import DomainAPIException
+from shared.tenancy.helpers import (
+    assert_user_branch_access,
+    scope_queryset_by_branch_access,
+)
 from shared.views import ModelCRUDView
+
+
+def _branch_access_response(user, branch_id):
+    try:
+        assert_user_branch_access(user, branch_id)
+    except DomainAPIException as exc:
+        return error_response(
+            message=exc.user_message,
+            error_code=exc.error_code,
+            http_status=exc.status_code,
+        )
+    return None
 
 
 @document_inventory_get_api_view(
@@ -31,7 +47,8 @@ from shared.views import ModelCRUDView
     summary="List sellable POS products",
     description=(
         "Returns branch-scoped product catalog with live stock quantities. "
-        "Requires pos view permission. Query param branch is required for stock context."
+        "Requires pos view permission. Query param branch is required. "
+        "Branch-assigned users may only query their assigned branch."
     ),
     response_serializer=POSProductRowSerializer,
     many=True,
@@ -47,6 +64,9 @@ class POSProductListView(APIView):
                 error_code=str(ErrorCode.VALIDATION_ERROR),
                 http_status=status.HTTP_400_BAD_REQUEST,
             )
+        denied = _branch_access_response(request.user, branch_id)
+        if denied is not None:
+            return denied
         products = Product.objects.filter(is_active=True).select_related(
             "category", "unit"
         )[:200]
@@ -73,7 +93,10 @@ class POSProductListView(APIView):
 @document_inventory_post_api_view(
     tags=[POS_TENANT_TAG],
     summary="Validate POS cart",
-    description="Validates line items, stock, and promotion preview for checkout.",
+    description=(
+        "Validates line items, stock, and promotion preview for checkout. "
+        "Branch-assigned users may only validate carts for their branch."
+    ),
     request_serializer=POSCartValidateRequestSerializer,
     response_serializer=POSCartValidateResponseSerializer,
 )
@@ -81,7 +104,11 @@ class POSCartValidateView(APIView):
     permission_classes = [HasFeaturePermission.require("pos", "view")]
 
     def post(self, request):
-        branch = Branch.objects.filter(pk=request.data.get("branch")).first()
+        branch_id = request.data.get("branch")
+        denied = _branch_access_response(request.user, branch_id)
+        if denied is not None:
+            return denied
+        branch = Branch.objects.filter(pk=branch_id).first()
         if branch is None:
             return error_response(
                 message="Branch not found.",
@@ -122,7 +149,8 @@ class POSCartValidateView(APIView):
     summary="Complete POS checkout",
     description=(
         "Atomically creates sale, payments, discounts, and decrements branch stock. "
-        "Supports idempotency_key for replay protection."
+        "Supports idempotency_key for replay protection. Branch-assigned users "
+        "may only checkout at their assigned branch."
     ),
     request_serializer=POSCheckoutRequestSerializer,
     response_serializer=SaleSerializer,
@@ -132,7 +160,11 @@ class POSCheckoutView(APIView):
     permission_classes = [HasFeaturePermission.require("pos", "edit")]
 
     def post(self, request):
-        branch = Branch.objects.filter(pk=request.data.get("branch")).first()
+        branch_id = request.data.get("branch")
+        denied = _branch_access_response(request.user, branch_id)
+        if denied is not None:
+            return denied
+        branch = Branch.objects.filter(pk=branch_id).first()
         if branch is None:
             return error_response(
                 message="Branch not found.",
@@ -195,7 +227,8 @@ class POSCheckoutView(APIView):
             "summary": "List POS orders",
             "description": (
                 "Lists completed sales. Tenant admin sees all branches; "
-                "optional ?branch= filters."
+                "branch-assigned users see their branch only. Optional ?branch= "
+                "filters tenant admin results."
             ),
         },
     },
@@ -227,7 +260,10 @@ class POSOrderListView(ModelCRUDView):
         "GET": {"summary": "Retrieve POS order", "description": "Returns sale receipt detail."},
         "POST": {
             "summary": "Cancel POS order",
-            "description": "POST with ?action=cancel restores stock.",
+            "description": (
+                "POST with ?action=cancel restores stock. Branch-assigned users "
+                "may only cancel orders in their branch scope."
+            ),
         },
     },
 )
@@ -243,7 +279,13 @@ class POSOrderDetailView(POSOrderListView):
 
 
 def _cancel_order(view, request, pk):
-    sale = Sale.objects.filter(pk=pk).first()
+    qs = scope_queryset_by_branch_access(
+        Sale.objects.all(),
+        request.user,
+        branch_field="branch_id",
+        branch_filter_id=request.query_params.get("branch"),
+    )
+    sale = qs.filter(pk=pk).first()
     if sale is None:
         return error_response(
             message="Order not found.",
