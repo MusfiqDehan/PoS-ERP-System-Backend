@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+  <body>
+    <h1>You have been invited to Sortorium</h1>
+    <p>Hi {{ invitee_full_name }},</p>
+    <p>
+      You have been invited to join the Sortorium platform team as
+      <strong>{{ role_name }}</strong>.
+    </p>
+    <p><a href="{{ invitation_url }}">Accept invitation</a></p>
+    <p>After accepting, sign in at <a href="{{ sign_in_url }}">{{ sign_in_url }}</a>.</p>
+    <p>Expires: {{ expires_at }}</p>
+  </body>
+</html>
