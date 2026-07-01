@@ -234,7 +234,9 @@ def test_replenishment_hides_other_branches_for_scoped_user(
 ):
     user, branch_a = cashier_user
     product = _product_with_stock(branch_a, "REPL", second_branch)
-    own_stock = StockService.get_or_create_branch_stock(branch=branch_a, product=product)
+    own_stock = StockService.get_or_create_branch_stock(
+        branch=branch_a, product=product
+    )
     StockService.increment(
         stock_level_id=own_stock.id,
         quantity=Decimal("3"),
@@ -260,4 +262,3 @@ def test_replenishment_hides_other_branches_for_scoped_user(
         row for row in response.data["data"] if row["source_type"] == "branch"
     ]
     assert all(row["source_id"] == str(branch_a.id) for row in branch_sources)
-
