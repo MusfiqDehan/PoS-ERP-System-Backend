@@ -146,7 +146,14 @@ class StockTransferSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "status", "ref_number", "requested_by", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "status",
+            "ref_number",
+            "requested_by",
+            "created_at",
+            "updated_at",
+        ]
 
     def create(self, validated_data):
         from apps.inventory.utils import generate_ref_number
