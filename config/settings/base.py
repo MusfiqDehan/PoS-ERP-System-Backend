@@ -347,6 +347,7 @@ REST_FRAMEWORK = {
         "tenant_auth": "30/minute",
         "tenant_password_reset": "10/hour",
         "tenant_password_setup": "20/hour",
+        "tenant_employee_invitation": "60/hour",
         "superadmin_invitation": "60/hour",
         "platform_auth": "30/minute",
         "platform_password_reset": "10/hour",
