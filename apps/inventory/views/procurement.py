@@ -11,11 +11,28 @@ from apps.inventory.serializers.procurement import (
     PurchaseOrderSerializer,
 )
 from apps.inventory.services.procurement import ProcurementService
-from apps.inventory.views.stock import BranchScopedDetailView, BranchScopedInventoryView
 from shared.responses import error_response, success_response
 from shared.responses.error_codes import ErrorCode
+from shared.views import ModelCRUDView
 
 from apps.inventory.models import PurchaseOrder
+
+
+class _ProcurementBaseView(ModelCRUDView):
+    permission_classes = [HasFeaturePermission.require("inventory", "view")]
+    pagination_class = None
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [HasFeaturePermission.require("inventory", "edit")()]
+        return super().get_permissions()
+
+
+class _ProcurementDetailView(_ProcurementBaseView):
+    def get_permissions(self):
+        if self.request.method in ("GET", "HEAD", "OPTIONS"):
+            return [HasFeaturePermission.require("inventory", "view")()]
+        return [HasFeaturePermission.require("inventory", "edit")()]
 
 
 def _po_action(view, request, pk, action_fn, message: str):
@@ -38,7 +55,10 @@ def _po_action(view, request, pk, action_fn, message: str):
     operations={
         "GET": {
             "summary": "List purchase orders",
-            "description": "Lists purchase orders for warehouse procurement.",
+            "description": (
+                "Lists tenant-wide purchase orders for warehouse procurement. "
+                "Not branch-filtered; requires inventory view permission."
+            ),
         },
         "POST": {
             "summary": "Create purchase order",
@@ -46,12 +66,11 @@ def _po_action(view, request, pk, action_fn, message: str):
         },
     },
 )
-class PurchaseOrderListCreateView(BranchScopedInventoryView):
+class PurchaseOrderListCreateView(_ProcurementBaseView):
     queryset = PurchaseOrder.objects.select_related(
         "supplier", "warehouse"
     ).prefetch_related("lines").order_by("-created_at")
     serializer_class = PurchaseOrderSerializer
-    branch_field = "warehouse_id"
 
 
 @document_crud_view(
@@ -65,12 +84,11 @@ class PurchaseOrderListCreateView(BranchScopedInventoryView):
         "POST": {"summary": "PO action", "description": "POST with ?action=send|cancel."},
     },
 )
-class PurchaseOrderDetailView(BranchScopedDetailView):
+class PurchaseOrderDetailView(_ProcurementDetailView):
     queryset = PurchaseOrder.objects.select_related(
         "supplier", "warehouse"
     ).prefetch_related("lines")
     serializer_class = PurchaseOrderSerializer
-    branch_field = "warehouse_id"
     actions = {
         "send": lambda v, r, pk: _po_action(
             v, r, pk, ProcurementService.send_purchase_order, "Purchase order sent."
