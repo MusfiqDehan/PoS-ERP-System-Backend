@@ -6,13 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tenancy', '0003_tenant_created_by_tenant_landing_page_enabled_and_more'),
+        ("tenancy", "0003_tenant_created_by_tenant_landing_page_enabled_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='invitation',
-            name='token_type',
-            field=models.CharField(choices=[('verification', 'Verification'), ('invitation', 'Invitation'), ('password_reset', 'Password Reset'), ('platform_invite', 'Platform Team Invitation'), ('employee_invite', 'Tenant Employee Invitation')], max_length=20),
+            model_name="invitation",
+            name="token_type",
+            field=models.CharField(
+                choices=[
+                    ("verification", "Verification"),
+                    ("invitation", "Invitation"),
+                    ("password_reset", "Password Reset"),
+                    ("platform_invite", "Platform Team Invitation"),
+                    ("employee_invite", "Tenant Employee Invitation"),
+                ],
+                max_length=20,
+            ),
         ),
     ]
