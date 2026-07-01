@@ -264,12 +264,8 @@ class StockTransferLine(BaseModel):
         blank=True,
     )
     quantity_requested = models.DecimalField(max_digits=14, decimal_places=3)
-    quantity_approved = models.DecimalField(
-        max_digits=14, decimal_places=3, default=0
-    )
-    quantity_received = models.DecimalField(
-        max_digits=14, decimal_places=3, default=0
-    )
+    quantity_approved = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    quantity_received = models.DecimalField(max_digits=14, decimal_places=3, default=0)
 
 
 class StockRequest(BaseModel):
@@ -353,6 +349,4 @@ class StockRequestLine(BaseModel):
         blank=True,
     )
     quantity_requested = models.DecimalField(max_digits=14, decimal_places=3)
-    quantity_approved = models.DecimalField(
-        max_digits=14, decimal_places=3, default=0
-    )
+    quantity_approved = models.DecimalField(max_digits=14, decimal_places=3, default=0)
