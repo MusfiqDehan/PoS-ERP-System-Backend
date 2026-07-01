@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from shared.filters import (
     BRANCH_SCOPED_LIST_FILTER_BACKENDS,
     DEFAULT_LIST_FILTER_BACKENDS,
@@ -7,7 +9,7 @@ from shared.tenancy.helpers import scope_queryset_by_branch_access
 
 
 class SearchFilterSortPaginationMixin:
-    pagination_class = CursorPagination
+    pagination_class: ClassVar[type[CursorPagination] | None] = CursorPagination
     filter_backends = DEFAULT_LIST_FILTER_BACKENDS
 
 
