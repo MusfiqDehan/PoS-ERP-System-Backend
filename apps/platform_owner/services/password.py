@@ -8,8 +8,6 @@ from apps.tenancy.models import Invitation, PlatformUserRole
 from apps.tenancy.services.email import EmailService
 from apps.tenancy.services.invitation import InvitationService
 
-from apps.platform_owner.services.invitation import _platform_console_subdomain
-
 User = get_user_model()
 
 
@@ -28,15 +26,13 @@ class PlatformPasswordService:
                 token_type=Invitation.TOKEN_TYPE_PASSWORD_RESET,
                 email=email,
                 invitee_full_name=user.full_name,
-                subdomain=_platform_console_subdomain(),
+                subdomain="",
                 company_name="Sortorium Platform",
                 ttl_minutes=30,
             )
         reset_url = InvitationService.build_token_url(invitation, raw_token)
-        EmailService.enqueue_password_reset(
-            tenant=None,
+        EmailService.enqueue_platform_password_reset(
             to_email=email,
-            company_name="Sortorium Platform",
             reset_url=reset_url,
             expires_at=invitation.expires_at,
         )
