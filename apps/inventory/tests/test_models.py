@@ -17,9 +17,7 @@ from apps.inventory.models import (
 @pytest.mark.django_db
 def test_category_parent_child(tenant_schema):
     parent = Category.objects.create(name="Electronics", slug="electronics")
-    child = Category.objects.create(
-        name="Phones", slug="phones", parent=parent
-    )
+    child = Category.objects.create(name="Phones", slug="phones", parent=parent)
     assert child.parent_id == parent.id
 
 
