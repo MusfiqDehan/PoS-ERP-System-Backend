@@ -2,12 +2,18 @@
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from apps.access.permissions import CanViewTenantUsers
-from apps.tenancy.openapi import TENANT_TENANCY_TAG
+from apps.tenancy.openapi import TENANT_TENANCY_TAG, envelope_responses
 from apps.tenancy.serializers.tenant_user import TenantUserListSerializer
+from apps.tenancy.services.users import TenantUserService
 from shared.models import AssetRelation
 from shared.openapi import document_crud_view
+from shared.responses import error_response
+from shared.responses.error_codes import ErrorCode
 from shared.services.asset_attachment import (
     USER_PROFILE_PICTURE_FIELD,
     USER_PROFILE_PICTURE_ROLE,
@@ -43,19 +49,32 @@ def build_profile_picture_asset_map(user_ids):
             "summary": "List tenant users (branch-scoped)",
             "description": (
                 "Lists active tenant users visible to the caller based on branch access "
-                "rules. Supports an optional branch query filter. Requires "
-                "CanViewTenantUsers permission."
+                "rules with cursor pagination. Supports an optional branch query filter. "
+                "Requires CanViewTenantUsers permission. No POST — employees are onboarded "
+                "via invitation only."
+            ),
+            "responses": envelope_responses(
+                (status.HTTP_200_OK, "Cursor-paginated tenant user list envelope."),
+            ),
+        },
+        "POST": {
+            "summary": "Direct tenant user creation (not allowed)",
+            "description": (
+                "Returns 405 — tenant employees are onboarded via employee invitation only."
+            ),
+            "responses": envelope_responses(
+                (
+                    status.HTTP_405_METHOD_NOT_ALLOWED,
+                    "Direct user creation not allowed (invite-only).",
+                ),
             ),
         },
     },
 )
 class TenantUserListView(ModelCRUDView):
-    queryset = (
-        get_user_model().objects.filter(is_active=True).order_by("full_name", "email")
-    )
+    queryset = TenantUserService.queryset()
     serializer_class = TenantUserListSerializer
     permission_classes = [CanViewTenantUsers]
-    pagination_class = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -74,3 +93,10 @@ class TenantUserListView(ModelCRUDView):
 
     def get_success_message(self, action: str) -> str:
         return "Tenant users retrieved successfully."
+
+    def post(self, request: Request, pk=None, **kwargs) -> Response:
+        return error_response(
+            message="Tenant employees are created via invitation only.",
+            error_code=str(ErrorCode.VALIDATION_ERROR),
+            http_status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
