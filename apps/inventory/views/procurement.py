@@ -4,7 +4,11 @@ from rest_framework import status
 from rest_framework.views import APIView
 
 from apps.access.permissions import HasFeaturePermission
-from apps.inventory.openapi import INVENTORY_TENANT_TAG, document_crud_view, document_inventory_post_api_view
+from apps.inventory.openapi import (
+    INVENTORY_TENANT_TAG,
+    document_crud_view,
+    document_inventory_post_api_view,
+)
 from apps.inventory.serializers.procurement import (
     GoodsReceiptCreateSerializer,
     GoodsReceiptSerializer,
@@ -67,9 +71,11 @@ def _po_action(view, request, pk, action_fn, message: str):
     },
 )
 class PurchaseOrderListCreateView(_ProcurementBaseView):
-    queryset = PurchaseOrder.objects.select_related(
-        "supplier", "warehouse"
-    ).prefetch_related("lines").order_by("-created_at")
+    queryset = (
+        PurchaseOrder.objects.select_related("supplier", "warehouse")
+        .prefetch_related("lines")
+        .order_by("-created_at")
+    )
     serializer_class = PurchaseOrderSerializer
 
 
@@ -81,7 +87,10 @@ class PurchaseOrderListCreateView(_ProcurementBaseView):
             "summary": "Update PO or action",
             "description": "Update or ?action=send|cancel.",
         },
-        "POST": {"summary": "PO action", "description": "POST with ?action=send|cancel."},
+        "POST": {
+            "summary": "PO action",
+            "description": "POST with ?action=send|cancel.",
+        },
     },
 )
 class PurchaseOrderDetailView(_ProcurementDetailView):
@@ -94,7 +103,11 @@ class PurchaseOrderDetailView(_ProcurementDetailView):
             v, r, pk, ProcurementService.send_purchase_order, "Purchase order sent."
         ),
         "cancel": lambda v, r, pk: _po_action(
-            v, r, pk, ProcurementService.cancel_purchase_order, "Purchase order cancelled."
+            v,
+            r,
+            pk,
+            ProcurementService.cancel_purchase_order,
+            "Purchase order cancelled.",
         ),
     }
 
@@ -121,9 +134,7 @@ class GoodsReceiptCreateView(APIView):
             lines=serializer.validated_data["validated_lines"],
             received_by=request.user,
         )
-        confirmed = ProcurementService.confirm_goods_receipt(
-            receipt, user=request.user
-        )
+        confirmed = ProcurementService.confirm_goods_receipt(receipt, user=request.user)
         return success_response(
             data=GoodsReceiptSerializer(confirmed).data,
             message="Goods received and stock updated.",
