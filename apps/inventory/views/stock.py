@@ -17,7 +17,6 @@ from apps.inventory.openapi import (
     INVENTORY_TENANT_TAG,
     document_crud_view,
     document_inventory_get_api_view,
-    document_inventory_post_api_view,
 )
 from apps.inventory.openapi_schemas import ReplenishmentOptionSerializer
 from apps.inventory.serializers.stock import (
@@ -102,9 +101,18 @@ class StockLevelListCreateView(BranchScopedInventoryView):
 @document_crud_view(
     tags=[INVENTORY_TENANT_TAG],
     operations={
-        "GET": {"summary": "Retrieve stock level", "description": "Returns a stock level."},
-        "PATCH": {"summary": "Update stock level", "description": "Updates alert thresholds."},
-        "DELETE": {"summary": "Delete stock level", "description": "Soft-deletes a stock level."},
+        "GET": {
+            "summary": "Retrieve stock level",
+            "description": "Returns a stock level.",
+        },
+        "PATCH": {
+            "summary": "Update stock level",
+            "description": "Updates alert thresholds.",
+        },
+        "DELETE": {
+            "summary": "Delete stock level",
+            "description": "Soft-deletes a stock level.",
+        },
     },
 )
 class StockLevelDetailView(BranchScopedDetailView):
@@ -137,7 +145,10 @@ class StockAdjustmentListCreateView(BranchScopedInventoryView):
 @document_crud_view(
     tags=[INVENTORY_TENANT_TAG],
     operations={
-        "GET": {"summary": "Retrieve adjustment", "description": "Returns an adjustment."},
+        "GET": {
+            "summary": "Retrieve adjustment",
+            "description": "Returns an adjustment.",
+        },
     },
 )
 class StockAdjustmentDetailView(BranchScopedDetailView):
@@ -181,7 +192,10 @@ def _transfer_action(view, request, pk, action_fn, message: str):
                 "Workflow actions via ?action= on PATCH/POST."
             ),
         },
-        "POST": {"summary": "Create transfer", "description": "Creates a stock transfer."},
+        "POST": {
+            "summary": "Create transfer",
+            "description": "Creates a stock transfer.",
+        },
     },
 )
 class StockTransferListCreateView(BranchScopedInventoryView):
@@ -253,7 +267,10 @@ def _partial_approve_action(view, request, pk):
             "summary": "List stock requests",
             "description": "Lists replenishment requests with ?branch= filter.",
         },
-        "POST": {"summary": "Create request", "description": "Creates a stock request."},
+        "POST": {
+            "summary": "Create request",
+            "description": "Creates a stock request.",
+        },
     },
 )
 class StockRequestListCreateView(BranchScopedInventoryView):
@@ -265,8 +282,14 @@ class StockRequestListCreateView(BranchScopedInventoryView):
 @document_crud_view(
     tags=[INVENTORY_TENANT_TAG],
     operations={
-        "GET": {"summary": "Retrieve request", "description": "Returns a stock request."},
-        "PATCH": {"summary": "Update request", "description": "Updates a stock request."},
+        "GET": {
+            "summary": "Retrieve request",
+            "description": "Returns a stock request.",
+        },
+        "PATCH": {
+            "summary": "Update request",
+            "description": "Updates a stock request.",
+        },
     },
 )
 class StockRequestDetailView(BranchScopedDetailView):
@@ -349,4 +372,6 @@ class ReplenishmentOptionsView(APIView):
                 error_code=str(ErrorCode.VALIDATION_ERROR),
                 http_status=status.HTTP_400_BAD_REQUEST,
             )
-        return success_response(data=options, message="Replenishment options retrieved.")
+        return success_response(
+            data=options, message="Replenishment options retrieved."
+        )
