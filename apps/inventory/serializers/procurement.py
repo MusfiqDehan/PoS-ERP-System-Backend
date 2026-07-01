@@ -40,14 +40,22 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "status", "ref_number", "total", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "status",
+            "ref_number",
+            "total",
+            "created_at",
+            "updated_at",
+        ]
 
     def create(self, validated_data):
         from apps.inventory.utils import generate_ref_number
 
         lines_data = validated_data.pop("lines")
         total = sum(
-            Decimal(str(line["quantity_ordered"])) * Decimal(str(line.get("unit_cost", 0)))
+            Decimal(str(line["quantity_ordered"]))
+            * Decimal(str(line.get("unit_cost", 0)))
             for line in lines_data
         )
         po = PurchaseOrder.objects.create(
