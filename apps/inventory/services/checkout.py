@@ -82,9 +82,11 @@ class CheckoutService:
         if coupon_code:
             coupon, coupon_discount = PromotionService.validate_coupon(coupon_code)
             discount_total += min(
-                subtotal * coupon_discount / Decimal("100")
-                if coupon.promotion.promotion_type == "percentage"
-                else coupon_discount,
+                (
+                    subtotal * coupon_discount / Decimal("100")
+                    if coupon.promotion.promotion_type == "percentage"
+                    else coupon_discount
+                ),
                 subtotal,
             )
 
