@@ -1,13 +1,16 @@
 """Catalog CRUD views."""
 
 from django.utils import timezone
-from rest_framework import status
 from rest_framework.views import APIView
 
 from apps.access.permissions import HasFeaturePermission
 from apps.inventory.filters import ProductFilterSet
 from apps.inventory.models import Category, Product
-from apps.inventory.openapi import INVENTORY_TENANT_TAG, document_crud_view, document_inventory_get_api_view
+from apps.inventory.openapi import (
+    INVENTORY_TENANT_TAG,
+    document_crud_view,
+    document_inventory_get_api_view,
+)
 from apps.inventory.openapi_schemas import LowStockProductRowSerializer
 from apps.inventory.serializers.catalog import (
     BrandSerializer,
@@ -72,7 +75,6 @@ def _catalog_detail_crud(model_name: str):
 
 class CatalogListCreateView(ModelCRUDView):
     permission_classes = [HasFeaturePermission.require("products", "view")]
-    pagination_class = None
 
     def get_permissions(self):
         if self.request.method == "POST":
@@ -89,6 +91,7 @@ class CatalogDetailView(CatalogListCreateView):
 
 @_catalog_crud("List categories", "Create category", "Category")
 class CategoryListCreateView(CatalogListCreateView):
+    pagination_class = None
     queryset = Category.objects.select_related("parent").order_by("name")
     serializer_class = CategorySerializer
 
@@ -118,6 +121,7 @@ class CategoryDetailView(CatalogDetailView):
     },
 )
 class SubCategoryListView(CatalogListCreateView):
+    pagination_class = None
     queryset = Category.objects.filter(parent__isnull=False).order_by("name")
     serializer_class = CategorySerializer
 
@@ -127,6 +131,7 @@ class SubCategoryListView(CatalogListCreateView):
 
 @_catalog_crud("List brands", "Create brand", "Brand")
 class BrandListCreateView(CatalogListCreateView):
+    pagination_class = None
     queryset = Brand.objects.order_by("name")
     serializer_class = BrandSerializer
 
@@ -139,6 +144,7 @@ class BrandDetailView(CatalogDetailView):
 
 @_catalog_crud("List units", "Create unit", "Unit")
 class UnitListCreateView(CatalogListCreateView):
+    pagination_class = None
     queryset = Unit.objects.order_by("name")
     serializer_class = UnitSerializer
 
@@ -151,6 +157,7 @@ class UnitDetailView(CatalogDetailView):
 
 @_catalog_crud("List warranties", "Create warranty", "Warranty")
 class WarrantyListCreateView(CatalogListCreateView):
+    pagination_class = None
     queryset = Warranty.objects.order_by("name")
     serializer_class = WarrantySerializer
 
@@ -161,8 +168,11 @@ class WarrantyDetailView(CatalogDetailView):
     serializer_class = WarrantySerializer
 
 
-@_catalog_crud("List variant attributes", "Create variant attribute", "VariantAttribute")
+@_catalog_crud(
+    "List variant attributes", "Create variant attribute", "VariantAttribute"
+)
 class VariantAttributeListCreateView(CatalogListCreateView):
+    pagination_class = None
     queryset = VariantAttribute.objects.order_by("name")
     serializer_class = VariantAttributeSerializer
 
@@ -219,7 +229,10 @@ class ProductListCreateView(SearchFilterSortPaginationMixin, CatalogListCreateVi
         },
         "PUT": {"summary": "Replace product", "description": "Replaces a product."},
         "PATCH": {"summary": "Update product", "description": "Updates a product."},
-        "DELETE": {"summary": "Delete product", "description": "Soft-deletes a product."},
+        "DELETE": {
+            "summary": "Delete product",
+            "description": "Soft-deletes a product.",
+        },
     },
 )
 class ProductDetailView(CatalogDetailView):
