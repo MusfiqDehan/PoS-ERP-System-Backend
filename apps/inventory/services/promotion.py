@@ -35,7 +35,9 @@ class PromotionService:
         return coupon, cls._discount_amount(promo)
 
     @classmethod
-    def validate_voucher(cls, code: str, amount: Decimal) -> tuple[GiftVoucher, Decimal]:
+    def validate_voucher(
+        cls, code: str, amount: Decimal
+    ) -> tuple[GiftVoucher, Decimal]:
         voucher = GiftVoucher.objects.filter(
             code__iexact=code.strip(), is_active=True
         ).first()
