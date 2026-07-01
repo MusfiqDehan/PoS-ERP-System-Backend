@@ -18,19 +18,45 @@ from apps.inventory.models import (
     StockTransfer,
     Warehouse,
 )
+from shared.tenancy.helpers import (
+    get_user_branch_scope_ids,
+    scope_queryset_by_branch_access,
+)
 
 
 class DashboardService:
     @classmethod
+    def _scope_sales(cls, user, branch_filter_id=None):
+        qs = Sale.objects.filter(status=Sale.STATUS_COMPLETED)
+        return scope_queryset_by_branch_access(
+            qs,
+            user,
+            branch_field="branch_id",
+            branch_filter_id=branch_filter_id,
+        )
+
+    @classmethod
+    def _scope_stock(cls, user, branch_filter_id=None):
+        return scope_queryset_by_branch_access(
+            StockLevel.objects.all(),
+            user,
+            branch_field="branch_id",
+            branch_filter_id=branch_filter_id,
+        )
+
+    @classmethod
     def summary(
         cls,
         *,
+        user,
         scope: str = "business",
         branch_id: UUID | None = None,
         warehouse_id: UUID | None = None,
+        branch_filter_id=None,
     ) -> dict:
-        sales_qs = Sale.objects.filter(status=Sale.STATUS_COMPLETED)
-        stock_qs = StockLevel.objects.all()
+        branch_param = str(branch_id) if branch_id else branch_filter_id
+        sales_qs = cls._scope_sales(user, branch_param)
+        stock_qs = cls._scope_stock(user, branch_param)
 
         if scope == "branch" and branch_id:
             sales_qs = sales_qs.filter(branch_id=branch_id)
@@ -59,6 +85,12 @@ class DashboardService:
         )
         low_stock_count = stock_qs.filter(quantity__lte=F("qty_alert")).count()
 
+        scope_ids = get_user_branch_scope_ids(user)
+        if scope_ids is not None:
+            branch_count = len(scope_ids)
+        else:
+            branch_count = Branch.objects.filter(is_active=True).count()
+
         return {
             "scope": scope,
             "branch_id": str(branch_id) if branch_id else None,
@@ -69,7 +101,7 @@ class DashboardService:
             "stock_sku_count": stock_agg["sku_count"],
             "low_stock_count": low_stock_count,
             "product_count": Product.objects.filter(is_active=True).count(),
-            "branch_count": Branch.objects.filter(is_active=True).count(),
+            "branch_count": branch_count,
             "warehouse_count": Warehouse.objects.filter(is_active=True).count(),
         }
 
@@ -77,12 +109,20 @@ class DashboardService:
     def low_stock(
         cls,
         *,
+        user,
         branch_id: UUID | None = None,
         warehouse_id: UUID | None = None,
+        branch_filter_id=None,
     ) -> list[dict]:
-        qs = StockLevel.objects.select_related(
-            "product", "variant", "branch", "warehouse"
-        ).filter(quantity__lte=F("qty_alert"))
+        branch_param = str(branch_id) if branch_id else branch_filter_id
+        qs = scope_queryset_by_branch_access(
+            StockLevel.objects.select_related(
+                "product", "variant", "branch", "warehouse"
+            ).filter(quantity__lte=F("qty_alert")),
+            user,
+            branch_field="branch_id",
+            branch_filter_id=branch_param,
+        )
         if branch_id:
             qs = qs.filter(
                 location_type=StockLevel.LOCATION_BRANCH, branch_id=branch_id
@@ -109,24 +149,36 @@ class DashboardService:
     def pending_actions(
         cls,
         *,
+        user,
         branch_id: UUID | None = None,
+        branch_filter_id=None,
     ) -> dict:
-        transfers = StockTransfer.objects.filter(
-            status__in=[
-                StockTransfer.STATUS_PENDING,
-                StockTransfer.STATUS_IN_TRANSIT,
-            ]
+        branch_param = str(branch_id) if branch_id else branch_filter_id
+        transfers = scope_queryset_by_branch_access(
+            StockTransfer.objects.filter(
+                status__in=[
+                    StockTransfer.STATUS_PENDING,
+                    StockTransfer.STATUS_IN_TRANSIT,
+                ]
+            ),
+            user,
+            branch_field="source_branch_id",
+            branch_filter_id=branch_param,
         )
-        requests = StockRequest.objects.filter(
-            status__in=[StockRequest.STATUS_PENDING, StockRequest.STATUS_APPROVED]
+        requests = scope_queryset_by_branch_access(
+            StockRequest.objects.filter(
+                status__in=[StockRequest.STATUS_PENDING, StockRequest.STATUS_APPROVED]
+            ),
+            user,
+            branch_field="requesting_branch_id",
+            branch_filter_id=branch_param,
         )
         purchase_orders = PurchaseOrder.objects.filter(
             status=PurchaseOrder.STATUS_SENT
         )
         if branch_id:
             transfers = transfers.filter(
-                Q(source_branch_id=branch_id)
-                | Q(target_branch_id=branch_id)
+                Q(source_branch_id=branch_id) | Q(target_branch_id=branch_id)
             )
             requests = requests.filter(requesting_branch_id=branch_id)
         return {
@@ -141,6 +193,8 @@ class DashboardService:
         *,
         product_id: UUID,
         branch_id: UUID,
+        user=None,
+        include_other_branches: bool = True,
     ) -> list[dict]:
         options: list[dict] = []
         same_branch = (
@@ -164,21 +218,22 @@ class DashboardService:
                 }
             )
 
-        other_branches = StockLevel.objects.filter(
-            location_type=StockLevel.LOCATION_BRANCH,
-            product_id=product_id,
-            quantity__gt=0,
-        ).exclude(branch_id=branch_id).select_related("branch")[:5]
-        for idx, row in enumerate(other_branches, start=2):
-            options.append(
-                {
-                    "source_type": "branch",
-                    "source_id": str(row.branch_id),
-                    "source_name": row.branch.name,
-                    "quantity": str(row.quantity),
-                    "priority": idx,
-                }
-            )
+        if include_other_branches:
+            other_branches = StockLevel.objects.filter(
+                location_type=StockLevel.LOCATION_BRANCH,
+                product_id=product_id,
+                quantity__gt=0,
+            ).exclude(branch_id=branch_id).select_related("branch")[:5]
+            for idx, row in enumerate(other_branches, start=2):
+                options.append(
+                    {
+                        "source_type": "branch",
+                        "source_id": str(row.branch_id),
+                        "source_name": row.branch.name,
+                        "quantity": str(row.quantity),
+                        "priority": idx,
+                    }
+                )
 
         warehouses = StockLevel.objects.filter(
             location_type=StockLevel.LOCATION_WAREHOUSE,
