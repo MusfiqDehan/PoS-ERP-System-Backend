@@ -76,6 +76,17 @@ PREDEFINED_TENANT_ROLES = {
             "reports": "view",
         },
     },
+    "warehouse_manager": {
+        "name": "Warehouse Manager",
+        "description": "Manages warehouse inventory and procurement.",
+        "color": "#7c3aed",
+        "permissions": {
+            "dashboard": "view",
+            "inventory": "edit",
+            "products": "view",
+            "reports": "view",
+        },
+    },
 }
 
 
