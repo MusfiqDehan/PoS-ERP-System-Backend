@@ -64,6 +64,7 @@ TENANT_APPS = [
     "apps.tenancy.apps.TenancyConfig",
     "apps.access.apps.AccessConfig",
     "apps.branch.apps.BranchConfig",
+    "apps.inventory.apps.InventoryConfig",
     "apps.billing.apps.BillingConfig",
 ]
 
@@ -417,6 +418,20 @@ SPECTACULAR_SETTINGS = {
         {
             "name": "Branch - Tenant",
             "description": "Authenticated tenant branch management, summaries, and manager assignment.",
+        },
+        {
+            "name": "Inventory - Tenant",
+            "description": (
+                "Authenticated tenant inventory catalog, stock, procurement, "
+                "promotions, and dashboard operations."
+            ),
+        },
+        {
+            "name": "POS - Tenant",
+            "description": (
+                "Authenticated tenant point-of-sale checkout, cart validation, "
+                "and order management."
+            ),
         },
         {
             "name": "Platform Owner",
