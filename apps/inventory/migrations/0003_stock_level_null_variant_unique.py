@@ -7,34 +7,58 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('branch', '0003_alter_branch_options_branch_address_branch_capacity_and_more'),
-        ('inventory', '0002_fix_stock_level_unique'),
+        ("branch", "0003_alter_branch_options_branch_address_branch_capacity_and_more"),
+        ("inventory", "0002_fix_stock_level_unique"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='stocklevel',
-            name='uniq_branch_stock_product_variant',
+            model_name="stocklevel",
+            name="uniq_branch_stock_product_variant",
         ),
         migrations.RemoveConstraint(
-            model_name='stocklevel',
-            name='uniq_warehouse_stock_product_variant',
+            model_name="stocklevel",
+            name="uniq_warehouse_stock_product_variant",
         ),
         migrations.AddConstraint(
-            model_name='stocklevel',
-            constraint=models.UniqueConstraint(condition=models.Q(('location_type', 'branch'), ('variant__isnull', True)), fields=('branch', 'product'), name='uniq_branch_stock_product_no_variant'),
+            model_name="stocklevel",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(
+                    ("location_type", "branch"), ("variant__isnull", True)
+                ),
+                fields=("branch", "product"),
+                name="uniq_branch_stock_product_no_variant",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='stocklevel',
-            constraint=models.UniqueConstraint(condition=models.Q(('location_type', 'branch'), ('variant__isnull', False)), fields=('branch', 'product', 'variant'), name='uniq_branch_stock_product_with_variant'),
+            model_name="stocklevel",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(
+                    ("location_type", "branch"), ("variant__isnull", False)
+                ),
+                fields=("branch", "product", "variant"),
+                name="uniq_branch_stock_product_with_variant",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='stocklevel',
-            constraint=models.UniqueConstraint(condition=models.Q(('location_type', 'warehouse'), ('variant__isnull', True)), fields=('warehouse', 'product'), name='uniq_warehouse_stock_product_no_variant'),
+            model_name="stocklevel",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(
+                    ("location_type", "warehouse"), ("variant__isnull", True)
+                ),
+                fields=("warehouse", "product"),
+                name="uniq_warehouse_stock_product_no_variant",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='stocklevel',
-            constraint=models.UniqueConstraint(condition=models.Q(('location_type', 'warehouse'), ('variant__isnull', False)), fields=('warehouse', 'product', 'variant'), name='uniq_warehouse_stock_product_with_variant'),
+            model_name="stocklevel",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(
+                    ("location_type", "warehouse"), ("variant__isnull", False)
+                ),
+                fields=("warehouse", "product", "variant"),
+                name="uniq_warehouse_stock_product_with_variant",
+            ),
         ),
     ]
