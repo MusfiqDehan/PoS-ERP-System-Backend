@@ -104,6 +104,20 @@ class AuthService:
         return {"access": str(access), "refresh": str(refresh)}
 
     @staticmethod
+    def tokens_for_tenant_user(
+        *, user: TenancyUser, tenant: Tenant, domain: str
+    ) -> dict[str, str]:
+        refresh = RefreshToken.for_user(user)
+        refresh["tenant_schema"] = tenant.schema_name
+        refresh["tenant_name"] = tenant.name
+        refresh["tenant_domain"] = domain
+        access = refresh.access_token
+        access["tenant_schema"] = tenant.schema_name
+        access["tenant_name"] = tenant.name
+        access["tenant_domain"] = domain
+        return {"access": str(access), "refresh": str(refresh)}
+
+    @staticmethod
     def serialize_user(user: TenancyUser) -> dict[str, Any]:
         from apps.tenancy.models import PlatformUserRole
 
